@@ -28,7 +28,8 @@ end
 --- Execute a fossil command and populate the quickfix list with the output
 --- @param args table The command arguments
 --- @param title string|nil The title for the quickfix list
-function M.open_quickfix_from_exec(args, title)
+--- @param use_loclist boolean|nil Whether to use the location list instead
+function M.open_quickfix_from_exec(args, title, use_loclist)
 	local output, code = api.exec(args)
 	if #output == 0 then
 		vim.notify("No output.", vim.log.levels.INFO)
@@ -50,13 +51,20 @@ function M.open_quickfix_from_exec(args, title)
 		end
 	end
 
-	vim.fn.setqflist({}, " ", { title = title or ("Fossil " .. table.concat(args, " ")), items = items })
-	vim.cmd("copen")
+	local list_title = title or ("Fossil " .. table.concat(args, " "))
+	if use_loclist then
+		vim.fn.setloclist(0, {}, " ", { title = list_title, items = items })
+		vim.cmd("lopen")
+	else
+		vim.fn.setqflist({}, " ", { title = list_title, items = items })
+		vim.cmd("copen")
+	end
 end
 
 --- Open the fossil timeline/log in a quickfix list
 --- @param args table The command arguments
-function M.open_clog(args)
+--- @param use_loclist boolean|nil Whether to use the location list instead
+function M.open_clog(args, use_loclist)
 	local output, code = api.exec(args)
 	if #output == 0 then
 		vim.notify("No output.", vim.log.levels.INFO)
@@ -73,8 +81,13 @@ function M.open_clog(args)
 		end
 	end
 
-	vim.fn.setqflist({}, " ", { title = "Fossil log", items = items })
-	vim.cmd("copen")
+	if use_loclist then
+		vim.fn.setloclist(0, {}, " ", { title = "Fossil log", items = items })
+		vim.cmd("lopen")
+	else
+		vim.fn.setqflist({}, " ", { title = "Fossil log", items = items })
+		vim.cmd("copen")
+	end
 end
 
 --- Open a diff split against the last committed version

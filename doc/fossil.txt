@@ -33,6 +33,15 @@ shortcut commands that act as aliases for `:Fossil <command>`.
         it opens the Fossil status window (equivalent to `:Fossil status`).
         For example: `:Fossil branch`, `:Fossil timeline`.
 
+:Fossil! [args]                                                     *:Fossil!*
+        Run an arbitrary fossil command asynchronously in the background. The
+        output is streamed to a preview window.
+
+:Fossil -p [args]                                         *:Fossil_--paginate*
+:Fossil --paginate [args]                                         *:Fossil_-p*
+        Run an arbitrary fossil command, capture output to a temporary buffer,
+        and open that buffer in a split window.
+
 :FossilStatus                                                  *:FossilStatus*
         Opens the Fossil status window. See |fossil-status|.
 
@@ -59,8 +68,14 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 :FossilGrep {pattern} [file ...]                                 *:FossilGrep*
         Populates the quickfix list with `fossil grep` results.
 
+:FossilLgrep {pattern} [file ...]                               *:FossilLgrep*
+        Populates the location list with `fossil grep` results.
+
 :FossilClog [args]                                               *:FossilClog*
         Populates the quickfix list with a fossil log listing.
+
+:FossilGllog [args]                                             *:FossilGllog*
+        Populates the location list with a fossil log listing.
 
 :FossilRead [file]                                               *:FossilRead*
         Reads the file's content from fossil (similar to `:Gread`).
@@ -68,8 +83,27 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 :FossilWrite [file]                                             *:FossilWrite*
         Writes the current buffer and adds it to fossil (similar to `:Gwrite`).
 
+:FossilWq [file]                                                   *:FossilWq*
+        Writes, adds, and quits the buffer (similar to `:Gwq`). Use `!` to
+        force quit.
+
 :FossilEdit [file]                                               *:FossilEdit*
         Opens the file in a new buffer (similar to `:Gedit`).
+
+:FossilSplit [file]                                             *:FossilSplit*
+        Opens the file in a horizontal split (similar to `:Gsplit`).
+
+:FossilVsplit [file]                                           *:FossilVsplit*
+        Opens the file in a vertical split (similar to `:Gvsplit`).
+
+:FossilTabedit [file]                                         *:FossilTabedit*
+        Opens the file in a new tab (similar to `:Gtabedit`).
+
+:FossilPedit [file]                                             *:FossilPedit*
+        Opens the file in a preview window (similar to `:Gpedit`).
+
+:FossilDrop [file]                                               *:FossilDrop*
+        Opens the file using `:drop` (similar to `:Gdrop`).
 
 :FossilBrowse [file]                                           *:FossilBrowse*
         Opens the file or repo in the browser using the remote URL.
@@ -95,7 +129,12 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 :FossilRm {file}                                                   *:FossilRm*
         Removes the specified file from the repository.
 
+:FossilUnlink {file}                                           *:FossilUnlink*
+        Removes the file from the repository and filesystem, but keeps the
+        (now empty) buffer open.
+
 :FossilMove {source} {destination}                               *:FossilMove*
+:FossilRename {source} {destination}                           *:FossilRename*
         Moves the file from source to destination using `fossil mv`.
 
 :FossilCd                                                           *:FossilCd*

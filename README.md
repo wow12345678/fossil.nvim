@@ -6,10 +6,11 @@ A Neovim plugin for Fossil SCM, inspired by [vim-fugitive](https://github.com/tp
 
 ## Features
 
-- **Status Window**: A dedicated window to view untracked, added, and edited files.
+- **Status Window**: A dedicated interactive window to view untracked, added, and edited files.
 - **Diff View**: Quickly view diffs of your changes with Neovim's syntax highlighting.
 - **Commit Flow**: Write commit messages directly in a Neovim buffer.
 - **Blame/Annotate**: View blame/annotation for a file in a dedicated buffer.
+- **Seamless Commands**: Run fossil commands, map outputs to quickfix/location lists, background processes, or open output in splits.
 
 ## Installation
 
@@ -37,55 +38,23 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ## Usage
 
-The primary command is `:Fossil`. For full documentation, open Neovim and run `:help fossil` or `:help fossil-commands`.
+The primary command is `:Fossil`. For full documentation of all commands, mappings, and APIs, open Neovim and run `:help fossil` or `:help fossil-commands`.
 
-- `:Fossil` or `:Fossil status`: Opens the Fossil status window.
+A few common commands to get started:
+
+- `:Fossil` or `:Fossil status`: Opens the interactive Fossil status window.
 - `:Fossil diff [file]`: Opens a scratch buffer with the diff output.
 - `:Fossil commit`: Opens a commit buffer to type your commit message. Save and quit (`:wq`) to perform the commit.
 - `:Fossil add <file>`: Adds the specified file.
 - `:Fossil rm <file>`: Removes the specified file.
-- `:Fossil blame <file>` or `:Fossil annotate <file>`: Opens a blame view in a scroll-bound split.
-- `:Fossil diffsplit [file]`: Opens a diff split for the file (defaults to current buffer).
-- `:Fossil vdiffsplit [file]`: Opens a vertical diff split for the file.
-- `:Fossil hdiffsplit [file]`: Opens a horizontal diff split for the file.
-- `:Fossil difftool [args]`: Populates quickfix with `fossil diff` output.
-- `:Fossil grep <pattern> <file ...>`: Populates quickfix with `fossil grep` results.
-- `:Fossil clog [args]`: Populates quickfix with a fossil log listing.
-- `:Fossil read [file]`: Reads the file's content from fossil (like `:Gread`).
-- `:Fossil write [file]`: Writes the current buffer and adds it to fossil (like `:Gwrite`).
-- `:Fossil edit [file]`: Opens the file in a new buffer (like `:Gedit`).
-- `:Fossil browse [file]`: Opens the file or repo in the browser using the remote URL (like `:GBrowse`).
+- `:Fossil blame <file>`: Opens a blame view in a scroll-bound split.
+- `:Fossil wq [file]`: Writes the current buffer, adds it to fossil, and quits (like `:Gwq`).
 
 You can also run any other fossil command using `:Fossil <command> [args...]`. For example, `:Fossil branch` or `:Fossil timeline`.
 
-### Status Window Mappings
+## Documentation
 
-When the status window is open (`:Fossil status`), you can use the following default mappings (Fugitive-inspired):
-
-- `<CR>`: Open the file under the cursor.
-- `o`: Open the file in a horizontal split.
-- `gO`: Open the file in a vertical split.
-- `O`: Open the file in a new tab.
-- `p`: Open the file in a preview window.
-- `)`: Jump to the next file.
-- `(`: Jump to the previous file.
-- `dd`: Diff split for the file under the cursor.
-- `dv`: Vertical diff split for the file under the cursor.
-- `ds`/`dh`: Horizontal diff split for the file under the cursor.
-- `dp`: Open a diff output buffer for the file under the cursor.
-- `=`: Toggle inline diff under the file.
-- `>`: Insert inline diff under the file.
-- `<`: Remove inline diff under the file.
-- `s`: Add (stage) an untracked file.
-- `u`: Untrack a newly added file.
-- `-`: Toggle add/untrack for new files.
-- `X`: Discard changes (revert tracked files, clean untracked files).
-- `cc`: Open the commit message buffer.
-- `ll`: Open the repository timeline/log.
-- `czz`: Push changes to the stash (`fossil stash save`).
-- `R`: Refresh the status window.
-- `g?`: Open the status help buffer.
-- `q` or `gq`: Close the status window.
+Full documentation is available via Vim's built-in help system. See `:help fossil.txt` after installation.
 
 ## Customization
 

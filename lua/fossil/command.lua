@@ -166,7 +166,7 @@ local function browse_command(args)
 	end
 end
 
-local function delete_command(args)
+local function delete_command(args, keep_buffer)
 	local filename = args[2] or vim.api.nvim_buf_get_name(0)
 	if filename == "" then
 		vim.notify("No file to delete.", vim.log.levels.WARN)
@@ -178,11 +178,13 @@ local function delete_command(args)
 	if code == 0 then
 		vim.notify("Deleted " .. target, vim.log.levels.INFO)
 		-- Remove buffer
-		local absolute_target = vim.fn.fnamemodify(target, ":p")
-		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-			if vim.api.nvim_buf_get_name(buf) == absolute_target then
-				vim.cmd("bdelete! " .. buf)
-				break
+		if not keep_buffer then
+			local absolute_target = vim.fn.fnamemodify(target, ":p")
+			for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+				if vim.api.nvim_buf_get_name(buf) == absolute_target then
+					vim.cmd("bdelete! " .. buf)
+					break
+				end
 			end
 		end
 		-- Refresh status if open
@@ -324,6 +326,34 @@ local function sync_command(args)
 	end)
 end
 
+local function wq_command(args, force)
+	local filename = args[2] or vim.api.nvim_buf_get_name(0)
+	if filename == "" then
+		vim.notify("No file to write.", vim.log.levels.WARN)
+		return
+	end
+	local target = util.resolve_target_path(filename) or filename
+
+	vim.cmd("write" .. (force and "!" or ""))
+	local _, code = api.exec({ "add", target })
+	if code == 0 then
+		vim.notify("Wrote and added " .. target .. " to fossil.", vim.log.levels.INFO)
+		vim.cmd("quit" .. (force and "!" or ""))
+	else
+		vim.notify("Wrote file, but fossil add failed.", vim.log.levels.ERROR)
+	end
+end
+
+local function edit_with_cmd(args, vim_cmd)
+	local filename = args[2] or vim.api.nvim_buf_get_name(0)
+	if filename == "" then
+		vim.notify("No file specified.", vim.log.levels.WARN)
+		return
+	end
+	local target = util.resolve_target_path(filename) or filename
+	vim.cmd(vim_cmd .. " " .. vim.fn.fnameescape(target))
+end
+
 -- Command dispatch table
 local commands = {
 	status = status_command,
@@ -347,8 +377,15 @@ local commands = {
 	edit = edit_command,
 	browse = browse_command,
 	commit = commit.open_commit_buffer,
-	delete = delete_command,
-	rm = delete_command,
+	delete = function(args)
+		delete_command(args, false)
+	end,
+	rm = function(args)
+		delete_command(args, false)
+	end,
+	unlink = function(args)
+		delete_command(args, true)
+	end,
 	move = move_command,
 	mv = move_command,
 	rename = move_command,
@@ -357,6 +394,36 @@ local commands = {
 	end,
 	lcd = function(args)
 		cd_command(args, true)
+	end,
+	split = function(args)
+		edit_with_cmd(args, "split")
+	end,
+	vsplit = function(args)
+		edit_with_cmd(args, "vsplit")
+	end,
+	tabedit = function(args)
+		edit_with_cmd(args, "tabedit")
+	end,
+	pedit = function(args)
+		edit_with_cmd(args, "pedit")
+	end,
+	drop = function(args)
+		edit_with_cmd(args, "drop")
+	end,
+	lgrep = function(args)
+		window.open_quickfix_from_exec(args, nil, true)
+	end,
+	gllog = function(args)
+		window.open_clog(args, true)
+	end,
+	wq = function(args)
+		local force = false
+		for _, arg in ipairs(args) do
+			if arg == "!" then
+				force = true
+			end
+		end
+		wq_command(args, force)
 	end,
 	checkout = checkout_command,
 	co = checkout_command,
@@ -375,6 +442,21 @@ local commands = {
 --- Run a fossil command and print its output in a scratch buffer or directly
 --- @param args table
 function M.execute(args)
+	local is_bang = false
+	local is_paginate = false
+	local filtered_args = {}
+
+	for _, arg in ipairs(args) do
+		if arg == "!" then
+			is_bang = true
+		elseif arg == "-p" or arg == "--paginate" then
+			is_paginate = true
+		else
+			table.insert(filtered_args, arg)
+		end
+	end
+	args = filtered_args
+
 	if #args == 0 then
 		require("fossil.ui.status").open_status_window()
 		return
@@ -386,12 +468,36 @@ function M.execute(args)
 	if command_func then
 		command_func(args)
 	else
-		-- Generic command: dump output to a scratch buffer
-		local output, code = api.exec(args)
-		if #output == 0 then
-			vim.api.nvim_echo({ { "Fossil command executed successfully (no output).", "Normal" } }, false, {})
+		if is_bang then
+			-- ! executes asynchronously and outputs to quickfix/preview
+			local title = "Fossil " .. table.concat(args, " ")
+			api.exec_async(args, nil, function(output, code)
+				if #output == 0 then
+					vim.notify("No output from " .. title, vim.log.levels.INFO)
+				else
+					-- dump to a scratch buffer in a small split, acting as a preview
+					local buf = window.open_scratch_buffer(title, output)
+					vim.cmd("pedit | wincmd P | buffer " .. buf .. " | wincmd p")
+				end
+			end)
+		elseif is_paginate then
+			-- -p / --paginate captures output to temp buffer and splits
+			local output, code = api.exec(args)
+			if #output == 0 then
+				vim.notify("Fossil command executed successfully (no output).", vim.log.levels.INFO)
+			else
+				local title = "Fossil " .. table.concat(args, " ")
+				local buf = window.open_scratch_buffer(title, output)
+				vim.cmd("sbuffer " .. buf)
+			end
 		else
-			window.open_scratch_buffer("Fossil " .. table.concat(args, " "), output)
+			-- Generic command: dump output to a scratch buffer
+			local output, code = api.exec(args)
+			if #output == 0 then
+				vim.api.nvim_echo({ { "Fossil command executed successfully (no output).", "Normal" } }, false, {})
+			else
+				window.open_scratch_buffer("Fossil " .. table.concat(args, " "), output)
+			end
 		end
 	end
 end
