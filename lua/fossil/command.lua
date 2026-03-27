@@ -369,9 +369,26 @@ local commands = {
 	hdiffsplit = function(args)
 		window.open_diffsplit(args, "split", true)
 	end,
-	difftool = window.open_difftool,
-	grep = window.open_quickfix_from_exec,
-	clog = window.open_clog,
+	difftool = function(args)
+		args[1] = "diff"
+		window.open_difftool(args)
+	end,
+	grep = function(args)
+		args[1] = "grep"
+		window.open_quickfix_from_exec(args)
+	end,
+	lgrep = function(args)
+		args[1] = "grep"
+		window.open_quickfix_from_exec(args, nil, true)
+	end,
+	clog = function(args)
+		args[1] = "timeline"
+		window.open_clog(args, false)
+	end,
+	gllog = function(args)
+		args[1] = "timeline"
+		window.open_clog(args, true)
+	end,
 	read = read_command,
 	write = write_command,
 	edit = edit_command,
