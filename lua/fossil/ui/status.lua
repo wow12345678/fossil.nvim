@@ -652,28 +652,6 @@ function M.open_status_window()
     vim.api.nvim_set_option_value("swapfile", false, { buf = M.buf })
     vim.api.nvim_set_option_value("filetype", "fossil", { buf = M.buf })
 
-    local syntax_cmds = [[
-		if exists("b:current_syntax")
-		  finish
-		endif
-
-		syn match fossilDiffAdd    "^    +.*"
-		syn match fossilDiffRemove "^    -.*"
-		syn match fossilDiffHunk   "^    @@.*"
-		syn match fossilDiffHeader "^    Index:.*"
-		syn match fossilDiffHeader "^    ===.*"
-		syn match fossilDiffHeader "^    ---.*"
-		syn match fossilDiffHeader "^    +++.*"
-
-		hi def link fossilDiffAdd    DiffAdd
-		hi def link fossilDiffRemove DiffDelete
-		hi def link fossilDiffHunk   DiffChange
-		hi def link fossilDiffHeader Type
-
-		let b:current_syntax = "fossil-inline-diff"
-	]]
-    vim.cmd(syntax_cmds)
-
     -- Auto-refresh autocommands
     local augroup = vim.api.nvim_create_augroup("FossilStatusAutoRefresh", { clear = true })
     vim.api.nvim_create_autocmd({ "BufWritePost", "FocusGained", "ShellCmdPost" }, {
