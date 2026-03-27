@@ -328,7 +328,7 @@ cb<Space>       Populate the command line with `:Fossil branch `.
 co<Space>       Populate the command line with `:Fossil checkout `.
 cr<Space>       Populate the command line with `:Fossil revert `.
 cm<Space>       Populate the command line with `:Fossil merge `.
-ll              Open the repository timeline/log (clog).
+cl              Open the repository timeline/log (clog).
 czz             Push changes to the stash (fossil stash save).
 cz<Space>       Populate the command line with `:Fossil stash `.
 cza             Select a stash to apply from a menu.

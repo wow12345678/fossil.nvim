@@ -42,7 +42,7 @@ function M.open_help()
         "",
         " [ Repository Actions ]",
         "   cc    Open commit window to commit staged changes",
-        "   ll    Open the repository timeline/log",
+        "   cl    Open the repository timeline/log",
         "   czz   Push changes to the stash (fossil stash save)",
         "   cza   Select a stash to apply",
         "   czp   Select a stash to pop",
