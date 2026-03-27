@@ -360,18 +360,21 @@ local commands = {
 	diff = diff_command,
 	blame = blame.open_blame_view,
 	annotate = blame.open_blame_view,
-	diffsplit = function(args)
-		window.open_diffsplit(args)
+	diffsplit = function(args, is_bang)
+		window.open_diffsplit(args, nil, false, is_bang)
 	end,
-	vdiffsplit = function(args)
-		window.open_diffsplit(args, "vsplit")
+	vdiffsplit = function(args, is_bang)
+		window.open_diffsplit(args, "vsplit", false, is_bang)
 	end,
-	hdiffsplit = function(args)
-		window.open_diffsplit(args, "split", true)
+	hdiffsplit = function(args, is_bang)
+		window.open_diffsplit(args, "split", true, is_bang)
 	end,
-	difftool = function(args)
+	difftool = function(args, is_bang)
 		args[1] = "diff"
-		window.open_difftool(args)
+		window.open_difftool(args, is_bang)
+	end,
+	mergetool = function(args, is_bang)
+		window.open_mergetool(args)
 	end,
 	grep = function(args)
 		args[1] = "grep"
@@ -483,7 +486,7 @@ function M.execute(args)
 	local command_func = commands[cmd]
 
 	if command_func then
-		command_func(args)
+		command_func(args, is_bang, is_paginate)
 	else
 		if is_bang then
 			-- ! executes asynchronously and outputs to quickfix/preview

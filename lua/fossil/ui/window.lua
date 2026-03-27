@@ -94,7 +94,8 @@ end
 --- @param args table The command arguments
 --- @param split_cmd string|nil The split command to use (e.g. "vsplit")
 --- @param novertical boolean|nil If true, use horizontal split
-function M.open_diffsplit(args, split_cmd, novertical)
+--- @param is_bang boolean|nil If true, retain focus on original window
+function M.open_diffsplit(args, split_cmd, novertical, is_bang)
 	local filename = args[2] or vim.api.nvim_buf_get_name(0)
 	if filename == "" then
 		vim.notify("diffsplit requires a file path.", vim.log.levels.WARN)
@@ -152,12 +153,24 @@ function M.open_diffsplit(args, split_cmd, novertical)
 	-- Enable diff mode on this new window
 	vim.cmd("diffthis")
 
-	-- Go back to working tree window
-	vim.cmd("wincmd p")
+	-- Retain focus on original window if ! was used
+	if is_bang then
+		vim.cmd("wincmd p")
+	end
 end
 
-function M.open_difftool(args)
-	local output, code = api.exec(args)
+function M.open_difftool(args, is_bang)
+	local is_y = false
+	local filtered_args = {}
+	for _, arg in ipairs(args) do
+		if arg == "-y" then
+			is_y = true
+		else
+			table.insert(filtered_args, arg)
+		end
+	end
+
+	local output, code = api.exec(filtered_args)
 	if #output == 0 then
 		vim.notify("No diff output.", vim.log.levels.INFO)
 		return
@@ -175,10 +188,30 @@ function M.open_difftool(args)
 			end
 		end
 	end
+
 	if #items > 0 then
-		vim.fn.setqflist({}, " ", { title = "Fossil diff", items = items })
-		vim.cmd("copen")
+		if is_y then
+			-- Open each changed file in a new tab, and invoke Gdiffsplit!
+			for _, item in ipairs(items) do
+				local file = item.filename
+				vim.cmd("tabedit " .. vim.fn.fnameescape(file))
+				M.open_diffsplit({ "diffsplit", file }, "vsplit", false, true)
+			end
+			vim.cmd("tabfirst")
+		else
+			vim.fn.setqflist({}, " ", { title = "Fossil diff", items = items })
+			vim.cmd("copen")
+			if not is_bang then
+				vim.cmd("cfirst")
+			end
+		end
 	end
+end
+
+function M.open_mergetool(args)
+	-- Fossil marks conflicts with <<<<<<< in files. We can find these with grep.
+	local grep_args = { "grep", "<<<<<<<" }
+	M.open_quickfix_from_exec(grep_args, "Fossil merge conflicts")
 end
 
 return M

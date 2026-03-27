@@ -38,4 +38,26 @@ function M.resolve_target_path(arg)
 	return arg
 end
 
+--- Gets the path of the current buffer relative to the fossil repository root
+--- @param buf number|nil Optional buffer number, defaults to 0
+--- @return string
+function M.get_relative_path(buf)
+	local path = vim.api.nvim_buf_get_name(buf or 0)
+	if not path or path == "" then
+		return ""
+	end
+	
+	-- Check if it's a fossil:// URL
+	local fossil_uri = path:match("^fossil://(.+)$")
+	if fossil_uri then
+		path = fossil_uri
+	end
+
+	local root = M.get_repo_root()
+	if root and path:sub(1, #root) == root then
+		return path:sub(#root + 2) -- remove root and trailing slash
+	end
+	return vim.fn.fnamemodify(path, ":t")
+end
+
 return M

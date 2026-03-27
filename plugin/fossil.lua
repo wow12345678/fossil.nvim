@@ -80,6 +80,13 @@ vim.api.nvim_create_user_command("FossilDifftool", function(opts)
 	end
 	fossil_command.execute({ "difftool", unpack(args) })
 end, { bang = true, nargs = "*" })
+vim.api.nvim_create_user_command("FossilMergetool", function(opts)
+	local args = vim.deepcopy(opts.fargs)
+	if opts.bang then
+		table.insert(args, 1, "!")
+	end
+	fossil_command.execute({ "mergetool", unpack(args) })
+end, { bang = true, nargs = "*" })
 vim.api.nvim_create_user_command("FossilGrep", function(opts)
 	local args = vim.deepcopy(opts.fargs)
 	if opts.bang then
@@ -260,3 +267,44 @@ end, { nargs = "*" })
 vim.api.nvim_create_user_command("FossilFetch", function(opts)
 	fossil_command.execute({ "fetch", unpack(opts.fargs) })
 end, { nargs = "*" })
+
+if vim.g.fossil_no_maps ~= 1 then
+	vim.keymap.set("n", "y<C-G>", function()
+		local path = require("fossil.util").get_relative_path()
+		if path ~= "" then
+			vim.fn.setreg('"', path)
+			vim.fn.setreg('0', path)
+			vim.notify("Yanked: " .. path, vim.log.levels.INFO)
+		end
+	end, { desc = "Yank fossil relative path" })
+
+	vim.keymap.set("c", "<C-R><C-G>", function()
+		return require("fossil.util").get_relative_path()
+	end, { expr = true, desc = "Insert fossil relative path" })
+end
+
+-- Statusline integration
+local statusline_cache = {}
+
+--- Returns a string suitable for inclusion in the statusline, caching the result
+--- @return string
+function _G.FossilStatusline()
+	local root = require("fossil.util").get_repo_root()
+	if not root then return "" end
+
+	local now = vim.uv.now()
+	local cache = statusline_cache[root]
+	
+	if cache and (now - cache.time < 5000) then
+		return cache.text
+	end
+
+	local output, code = require("fossil.api").exec({ "branch", "current" })
+	if code == 0 and output[1] then
+		local text = "[Fossil(" .. output[1] .. ")]"
+		statusline_cache[root] = { time = now, text = text }
+		return text
+	end
+
+	return ""
+end

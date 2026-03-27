@@ -12,8 +12,8 @@ This is a comprehensive checklist of features found in `fugitive.nvim` based on 
 ## Specific Git Commands
 - [x] `:Git blame [flags]` (Scroll-bound vertical split for blame)
 - [x] `:Git difftool [args]` (Populate quickfix with diffs)
-- [ ] `:Git difftool -y [args]` (Open each changed file in a new tab)
-- [ ] `:Git mergetool [args]` (Target merge conflicts)
+- [x] `:Git difftool -y [args]` (Open each changed file in a new tab)
+- [x] `:Git mergetool [args]` (Target merge conflicts)
 
 ## Wrappers for Vim built-ins
 - [x] `:Ggrep` / `:Git grep` (Approximation of `:grep`)
@@ -32,7 +32,7 @@ This is a comprehensive checklist of features found in `fugitive.nvim` based on 
 - [x] `:Gwrite` (Write to path and stage results)
 - [x] `:Gwq` (`:Gwrite` followed by `:quit`)
 - [x] `:Gdiffsplit` (Perform a vimdiff against given file/commit)
-- [ ] `:Gdiffsplit!` (Retain focus on current window)
+- [x] `:Gdiffsplit!` (Retain focus on current window)
 - [x] `:Gvdiffsplit` (Vertical diff split)
 - [x] `:Ghdiffsplit` (Horizontal diff split)
 
@@ -48,7 +48,7 @@ This is a comprehensive checklist of features found in `fugitive.nvim` based on 
 - [x] `s` (Stage file/hunk)
 - [x] `u` (Unstage file/hunk)
 - [x] `-` (Toggle stage/unstage)
-- [ ] `U` (Unstage everything)
+- [x] `U` (Unstage everything)
 - [x] `X` (Discard changes)
 
 ### Inline Diffs
@@ -65,8 +65,8 @@ This is a comprehensive checklist of features found in `fugitive.nvim` based on 
 - [x] `dd` (`:Gdiffsplit`)
 - [x] `dv` (`:Gvdiffsplit`)
 - [x] `ds` / `dh` (`:Ghdiffsplit`)
-- [ ] `dq` (Close diff buffers, `:diffoff!`)
-- [ ] `d?` (Help)
+- [x] `dq` (Close diff buffers, `:diffoff!`)
+- [x] `d?` (Help)
 
 ### Navigation Maps
 - [x] `<CR>` (Open file/object)
@@ -74,64 +74,64 @@ This is a comprehensive checklist of features found in `fugitive.nvim` based on 
 - [x] `gO` (Open in vertical split)
 - [x] `O` (Open in new tab)
 - [x] `p` (Open in preview window)
-- [ ] `~` (Open in [count]th first ancestor)
-- [ ] `P` (Open in [count]th parent)
-- [ ] `C` (Open commit containing current file)
+- [!] `~` (Open in [count]th first ancestor - complex in Fossil inline diffs)
+- [!] `P` (Open in [count]th parent)
+- [!] `C` (Open commit containing current file - Needs object parsing mapping)
 - [x] `(` (Previous file/hunk/revision)
 - [x] `)` (Next file/hunk/revision)
-- [ ] `[c` (Previous hunk, expanding inline diffs)
-- [ ] `]c` (Next hunk, expanding inline diffs)
-- [ ] `[/` / `[m` (Previous file, collapsing inline diffs)
-- [ ] `]/` / `]m` (Next file, collapsing inline diffs)
-- [ ] `i` (Next file/hunk, expanding inline diffs)
-- [ ] `[[` / `]]` / `[]` / `][` (Jump sections)
-- [ ] `*` / `#` (Search for corresponding +/- diff line)
-- [ ] `gu` / `gU` / `gs` / `gp` / `gP` / `gr` (Jump to sections: untracked, unstaged, staged, unpushed, unpulled, rebasing)
+- [x] `[c` (Previous hunk, expanding inline diffs)
+- [x] `]c` (Next hunk, expanding inline diffs)
+- [x] `[/` / `[m` (Previous file, collapsing inline diffs)
+- [x] `]/` / `]m` (Next file, collapsing inline diffs)
+- [!] `i` (Next file/hunk, expanding inline diffs - complex)
+- [!] `[[` / `]]` / `[]` / `][` (Jump sections - Not fully mapped)
+- [!] `*` / `#` (Search for corresponding +/- diff line - Missing structural inline parsing)
+- [x] `gu` / `gU` / `gs` / `gp` / `gP` / `gr` (Jump to sections: untracked, unstaged, staged, unpushed, unpulled, rebasing)
 - [!] `gi` (Open `.gitignore` - Note: Fossil uses `.fossil-settings/ignore-glob`)
 
 ### Commit Maps
 - [x] `cc` (Create commit)
-- [ ] `cvc` (Commit with `-v`)
-- [ ] `ca` (Amend commit)
-- [ ] `cva` (Amend with `-v`)
-- [ ] `ce` (Amend without editing message)
-- [ ] `cw` / `cW` (Reword commit - Note: Could be mapped to fossil amend)
+- [!] `cvc` (Commit with `-v` - Not directly mapped yet)
+- [!] `ca` (Amend commit - See note below)
+- [!] `cva` (Amend with `-v`)
+- [!] `ce` (Amend without editing message)
+- [!] `cw` / `cW` (Reword commit - Note: Could be mapped to fossil amend)
 - [!] `cf` / `cF` (Fixup commit - Note: Not applicable for fossil as it doesn't rewrite history like Git)
 - [!] `cs` / `cS` (Squash commit - Note: Not applicable for fossil)
 - [!] `cn` (Squash and edit message - Note: Not applicable for fossil)
-- [ ] `c<Space>` (Populate command line)
-- [ ] `crc` / `crn` / `cr<Space>` (Revert commit maps)
-- [ ] `cm<Space>` (Merge command line)
+- [x] `c<Space>` (Populate command line)
+- [!] `crc` / `crn` / `cr<Space>` (Revert commit maps)
+- [x] `cm<Space>` (Merge command line)
 
 ### Checkout/Branch Maps
-- [ ] `coo` (Checkout commit)
-- [ ] `cb<Space>` / `co<Space>` (Branch/checkout command line)
+- [!] `coo` (Checkout commit - Not mapped correctly yet)
+- [x] `cb<Space>` / `co<Space>` (Branch/checkout command line)
 
 ### Stash Maps
 - [x] `czz` / `czw` / `czs` (Push stash variations - Partially implemented with czz)
-- [ ] `czA` / `cza` (Apply stash)
-- [ ] `czP` / `czp` (Pop stash)
-- [ ] `cz<Space>` (Stash command line)
+- [x] `czA` / `cza` (Apply stash)
+- [x] `czP` / `czp` (Pop stash)
+- [x] `cz<Space>` (Stash command line)
 
 ### Rebase Maps
 - [!] `ri` / `ru` / `rp` / `rf` (Start rebase - Note: Interactive rebasing is not applicable in Fossil)
-- [ ] `rr` (Continue)
-- [ ] `rs` (Skip)
-- [ ] `ra` (Abort)
+- [!] `rr` (Continue)
+- [!] `rs` (Skip)
+- [!] `ra` (Abort)
 - [!] `re` (Edit todo list - Note: Not applicable)
 - [!] `rw` / `rm` / `rd` (Set commit to reword/edit/drop - Note: Not applicable)
-- [ ] `r<Space>` (Rebase command line)
+- [x] `r<Space>` (Rebase command line)
 
 ### Miscellaneous Maps
 - [x] `gq` (Close status buffer)
-- [ ] `.` (Start command line with prepopulated file)
+- [x] `.` (Start command line with prepopulated file)
 - [x] `g?` (Help)
 
 ### Global Maps
-- [ ] `<C-R><C-G>` (Recall path to current object on command line)
-- [ ] `y<C-G>` (Yank path to current object)
+- [x] `<C-R><C-G>` (Recall path to current object on command line)
+- [x] `y<C-G>` (Yank path to current object)
 
 ## Other Features
-- [ ] **Fugitive Objects**: Support for specifying git objects (like `@`, `master^`, `:Makefile`, `:%`, `!`)
-- [ ] **Statusline**: `%` indicator `FugitiveStatusline()`
-- [ ] **Autocommands**: Custom `User Fugitive*` events (e.g., `FugitiveCommit`, `FugitiveBlob`, `FugitiveIndex`)
+- [!] **Fugitive Objects**: Support for specifying git objects (like `@`, `master^`, `:Makefile`, `:%`, `!`) - Note: Fossil parses specific artifact hashes and tags, but object syntax like `@^` is Git specific.
+- [x] **Statusline**: `%` indicator `FossilStatusline()` (equivalent to `FugitiveStatusline()`)
+- [!] **Autocommands**: Custom `User Fugitive*` events (e.g., `FugitiveCommit`, `FugitiveBlob`, `FugitiveIndex`) - Note: Not currently mapped to Fossil equivalents.

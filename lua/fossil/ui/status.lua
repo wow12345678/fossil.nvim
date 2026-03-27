@@ -49,6 +49,39 @@ local function get_status_lines()
 	return lines
 end
 
+local function unstage_all()
+	local status_out = api.exec({ "status" })
+	local added_files = {}
+	for _, line in ipairs(status_out) do
+		local filename = line:match("^%s+ADDED%s+(.+)$")
+		if filename then
+			table.insert(added_files, filename)
+		end
+	end
+	if #added_files > 0 then
+		local args = { "rm", "--soft" }
+		for _, f in ipairs(added_files) do
+			table.insert(args, f)
+		end
+		api.exec(args)
+		M.refresh()
+		vim.notify("Unstaged " .. #added_files .. " files.", vim.log.levels.INFO)
+	else
+		vim.notify("Nothing to unstage.", vim.log.levels.INFO)
+	end
+end
+
+local function jump_to_section(header_pattern)
+	local total = vim.api.nvim_buf_line_count(M.buf)
+	for i = 1, total do
+		local line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
+		if line and line:match(header_pattern) then
+			vim.api.nvim_win_set_cursor(0, { i, 0 })
+			return
+		end
+	end
+end
+
 --- Run an action on the file under cursor
 --- @param filename string The file to open
 --- @param mode string The mode to open it with (e.g. "split", "vsplit", "tab", "pedit", "edit")
@@ -451,6 +484,12 @@ function M.open_status_window()
 	vim.keymap.set("n", "dp", function()
 		file_action("diff")
 	end, opts)
+	vim.keymap.set("n", "dq", function()
+		vim.cmd("only | diffoff!")
+	end, opts)
+	vim.keymap.set("n", "d?", function()
+		open_help()
+	end, opts)
 	vim.keymap.set("n", "=", function()
 		file_action("inline_toggle")
 	end, opts)
@@ -466,6 +505,27 @@ function M.open_status_window()
 	vim.keymap.set("n", "(", function()
 		jump_to_file(-1)
 	end, opts)
+	vim.keymap.set("n", "]/", function()
+		jump_to_file(1)
+	end, opts)
+	vim.keymap.set("n", "[/", function()
+		jump_to_file(-1)
+	end, opts)
+	vim.keymap.set("n", "]c", function()
+		vim.fn.search("^  | @@", "W")
+	end, opts)
+	vim.keymap.set("n", "[c", function()
+		vim.fn.search("^  | @@", "bW")
+	end, opts)
+	vim.keymap.set("n", "gu", function()
+		jump_to_section("^Untracked:")
+	end, opts)
+	vim.keymap.set("n", "gU", function()
+		jump_to_section("^Changes:")
+	end, opts)
+	vim.keymap.set("n", "gs", function()
+		jump_to_section("^Changes:")
+	end, opts)
 
 	-- Stage/unstage/toggle/discard
 	vim.keymap.set("n", "s", function()
@@ -476,6 +536,9 @@ function M.open_status_window()
 	end, opts)
 	vim.keymap.set("n", "-", function()
 		file_action("toggle")
+	end, opts)
+	vim.keymap.set("n", "U", function()
+		unstage_all()
 	end, opts)
 	vim.keymap.set("n", "X", function()
 		file_action("discard")
@@ -492,6 +555,62 @@ function M.open_status_window()
 		require("fossil.api").exec({ "stash", "save" })
 		M.refresh()
 		vim.notify("Stashed changes.", vim.log.levels.INFO)
+	end, opts)
+	vim.keymap.set("n", "czA", function()
+		require("fossil.api").exec({ "stash", "apply" })
+		M.refresh()
+		vim.notify("Applied stash.", vim.log.levels.INFO)
+	end, opts)
+	vim.keymap.set("n", "cza", function()
+		require("fossil.api").exec({ "stash", "apply" })
+		M.refresh()
+		vim.notify("Applied stash.", vim.log.levels.INFO)
+	end, opts)
+	vim.keymap.set("n", "czP", function()
+		require("fossil.api").exec({ "stash", "pop" })
+		M.refresh()
+		vim.notify("Popped stash.", vim.log.levels.INFO)
+	end, opts)
+	vim.keymap.set("n", "czp", function()
+		require("fossil.api").exec({ "stash", "pop" })
+		M.refresh()
+		vim.notify("Popped stash.", vim.log.levels.INFO)
+	end, opts)
+
+	-- Command line populating mappings
+	local feedkeys = vim.api.nvim_feedkeys
+	local termcodes = vim.api.nvim_replace_termcodes
+	local function feed(keys)
+		feedkeys(termcodes(keys, true, false, true), "n", false)
+	end
+
+	vim.keymap.set("n", "c<Space>", function()
+		feed(":Fossil commit ")
+	end, opts)
+	vim.keymap.set("n", "cb<Space>", function()
+		feed(":Fossil branch ")
+	end, opts)
+	vim.keymap.set("n", "co<Space>", function()
+		feed(":Fossil checkout ")
+	end, opts)
+	vim.keymap.set("n", "cr<Space>", function()
+		feed(":Fossil revert ")
+	end, opts)
+	vim.keymap.set("n", "cm<Space>", function()
+		feed(":Fossil merge ")
+	end, opts)
+	vim.keymap.set("n", "cz<Space>", function()
+		feed(":Fossil stash ")
+	end, opts)
+	vim.keymap.set("n", "r<Space>", function()
+		feed(":Fossil rebase ")
+	end, opts)
+
+	vim.keymap.set("n", ".", function()
+		local filename = get_file_under_cursor()
+		if filename then
+			feed(":Fossil " .. filename .. "<C-B><C-Right><Right> ")
+		end
 	end, opts)
 
 	-- Help
