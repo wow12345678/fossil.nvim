@@ -512,6 +512,70 @@ local function file_action(action_type)
     end
 end
 
+local function select_stash(action)
+    local output = api.exec({ "stash", "ls" })
+    if #output == 0 or (#output == 1 and output[1] == "empty stash") then
+        vim.notify("No stashes found.", vim.log.levels.INFO)
+        return
+    end
+
+    local stashes = {}
+    local current_stash = nil
+
+    for _, line in ipairs(output) do
+        local id, commit, date = line:match("^%s*(%d+):%s+%[(.-)%]%s+on%s+(.*)$")
+        if id then
+            if current_stash then
+                table.insert(stashes, current_stash)
+            end
+            current_stash = {
+                id = id,
+                commit = commit,
+                date = date,
+                comment = "",
+            }
+        elseif current_stash then
+            -- Append to comment
+            local comment_line = line:match("^%s*(.*)$")
+            if comment_line and comment_line ~= "" then
+                if current_stash.comment == "" then
+                    current_stash.comment = comment_line
+                else
+                    current_stash.comment = current_stash.comment .. " " .. comment_line
+                end
+            end
+        end
+    end
+    if current_stash then
+        table.insert(stashes, current_stash)
+    end
+
+    if #stashes == 0 then
+        vim.notify("No stashes found.", vim.log.levels.INFO)
+        return
+    end
+
+    vim.ui.select(stashes, {
+        prompt = "Select stash to " .. action .. ":",
+        format_item = function(item)
+            local display = string.format("%s: [%s] %s", item.id, item.commit, item.date)
+            if item.comment ~= "" then
+                display = display .. " - " .. item.comment
+            end
+            return display
+        end,
+    }, function(choice)
+        if choice then
+            api.exec({ "stash", action, choice.id })
+            M.refresh()
+            vim.notify(
+                string.format("%s stash %s.", action == "pop" and "Popped" or "Applied", choice.id),
+                vim.log.levels.INFO
+            )
+        end
+    end)
+end
+
 local function open_help()
     local lines = {
         "==================================================================",
@@ -557,8 +621,10 @@ local function open_help()
         "   cc    Open commit window to commit staged changes",
         "   ll    Open the repository timeline/log",
         "   czz   Push changes to the stash (fossil stash save)",
-        "   czA   Apply the most recent stash",
-        "   czp   Pop the most recent stash",
+        "   cza   Select a stash to apply",
+        "   czp   Select a stash to pop",
+        "   czA   Apply the most recent stash instantly",
+        "   czP   Pop the most recent stash instantly",
         "   R     Refresh the status window",
         "",
         " [ Command Line Population ]",
@@ -568,7 +634,6 @@ local function open_help()
         "   cr<Space> Populate command line with :F revert ",
         "   cm<Space> Populate command line with :F merge ",
         "   cz<Space> Populate command line with :F stash ",
-        "   r<Space>  Populate command line with :F rebase ",
         "   .         Populate command line with :F and file under cursor",
         "",
         " [ General ]",
@@ -668,6 +733,26 @@ function M.open_status_window()
 		let b:current_syntax = "fossil-inline-diff"
 	]]
     vim.cmd(syntax_cmds)
+
+    -- Auto-refresh autocommands
+    local augroup = vim.api.nvim_create_augroup("FossilStatusAutoRefresh", { clear = true })
+    vim.api.nvim_create_autocmd({ "BufWritePost", "FocusGained", "ShellCmdPost" }, {
+        group = augroup,
+        callback = function()
+            if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
+                M.refresh()
+            end
+        end,
+    })
+    vim.api.nvim_create_autocmd("BufEnter", {
+        group = augroup,
+        buffer = M.buf,
+        callback = function()
+            if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
+                M.refresh()
+            end
+        end,
+    })
 
     -- Setup keymaps
     local opts = { buffer = M.buf, silent = true, noremap = true }
@@ -778,9 +863,13 @@ function M.open_status_window()
         require("fossil.command").execute({ "clog" })
     end, opts)
     vim.keymap.set("n", "czz", function()
-        require("fossil.api").exec({ "stash", "save" })
-        M.refresh()
-        vim.notify("Stashed changes.", vim.log.levels.INFO)
+        vim.ui.input({ prompt = "Stash comment: " }, function(input)
+            if input ~= nil then
+                require("fossil.api").exec({ "stash", "save", "-m", input })
+                M.refresh()
+                vim.notify("Stashed changes.", vim.log.levels.INFO)
+            end
+        end)
     end, opts)
     vim.keymap.set("n", "czA", function()
         require("fossil.api").exec({ "stash", "apply" })
@@ -788,9 +877,7 @@ function M.open_status_window()
         vim.notify("Applied stash.", vim.log.levels.INFO)
     end, opts)
     vim.keymap.set("n", "cza", function()
-        require("fossil.api").exec({ "stash", "apply" })
-        M.refresh()
-        vim.notify("Applied stash.", vim.log.levels.INFO)
+        select_stash("apply")
     end, opts)
     vim.keymap.set("n", "czP", function()
         require("fossil.api").exec({ "stash", "pop" })
@@ -798,9 +885,7 @@ function M.open_status_window()
         vim.notify("Popped stash.", vim.log.levels.INFO)
     end, opts)
     vim.keymap.set("n", "czp", function()
-        require("fossil.api").exec({ "stash", "pop" })
-        M.refresh()
-        vim.notify("Popped stash.", vim.log.levels.INFO)
+        select_stash("pop")
     end, opts)
 
     -- Command line populating mappings
@@ -827,9 +912,6 @@ function M.open_status_window()
     end, opts)
     vim.keymap.set("n", "cz<Space>", function()
         feed(":F stash ")
-    end, opts)
-    vim.keymap.set("n", "r<Space>", function()
-        feed(":F rebase ")
     end, opts)
 
     vim.keymap.set("n", ".", function()

@@ -328,12 +328,13 @@ cb<Space>       Populate the command line with `:Fossil branch `.
 co<Space>       Populate the command line with `:Fossil checkout `.
 cr<Space>       Populate the command line with `:Fossil revert `.
 cm<Space>       Populate the command line with `:Fossil merge `.
-r<Space>        Populate the command line with `:Fossil rebase `.
 ll              Open the repository timeline/log (clog).
 czz             Push changes to the stash (fossil stash save).
 cz<Space>       Populate the command line with `:Fossil stash `.
-czA / cza       Apply the most recent stash.
-czP / czp       Pop the most recent stash.
+cza             Select a stash to apply from a menu.
+czp             Select a stash to pop from a menu.
+czA             Apply the most recent stash instantly.
+czP             Pop the most recent stash instantly.
 R               Refresh the status window.
 g?              Open the status help buffer.
 q / gq          Close the status window.
