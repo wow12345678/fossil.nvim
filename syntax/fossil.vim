@@ -21,7 +21,6 @@ syn match fossilDiffHeader "^    +++.*"
 
 hi def link fossilDiffAdd    DiffAdd
 hi def link fossilDiffRemove DiffDelete
-hi def link fossilDiffHunk   DiffChange
 hi def link fossilDiffHeader Type
 
 hi def link fossilHeader Title
