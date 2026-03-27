@@ -18,7 +18,7 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 
 ```lua
 use {
-  'yourusername/fossil.nvim',
+  'wow12345678/fossil.nvim',
   config = function()
     require('fossil').setup()
   end
@@ -29,7 +29,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  "yourusername/fossil.nvim",
+  "wow12345678/fossil.nvim",
   config = function()
     require("fossil").setup()
   end
