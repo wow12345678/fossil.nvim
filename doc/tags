@@ -11,6 +11,7 @@
 :FossilDelete	fossil.txt	/*:FossilDelete*
 :FossilDiffsplit	fossil.txt	/*:FossilDiffsplit*
 :FossilDifftool	fossil.txt	/*:FossilDifftool*
+:FossilDifftool_-y	fossil.txt	/*:FossilDifftool_-y*
 :FossilDrop	fossil.txt	/*:FossilDrop*
 :FossilEdit	fossil.txt	/*:FossilEdit*
 :FossilFetch	fossil.txt	/*:FossilFetch*
@@ -20,6 +21,7 @@
 :FossilInfo	fossil.txt	/*:FossilInfo*
 :FossilLcd	fossil.txt	/*:FossilLcd*
 :FossilLgrep	fossil.txt	/*:FossilLgrep*
+:FossilMergetool	fossil.txt	/*:FossilMergetool*
 :FossilMove	fossil.txt	/*:FossilMove*
 :FossilPedit	fossil.txt	/*:FossilPedit*
 :FossilPull	fossil.txt	/*:FossilPull*
@@ -41,6 +43,7 @@
 :FossilWrite	fossil.txt	/*:FossilWrite*
 :Fossil_--paginate	fossil.txt	/*:Fossil_--paginate*
 :Fossil_-p	fossil.txt	/*:Fossil_-p*
+FossilStatusline()	fossil.txt	/*FossilStatusline()*
 fossil-api	fossil.txt	/*fossil-api*
 fossil-commands	fossil.txt	/*fossil-commands*
 fossil-configuration	fossil.txt	/*fossil-configuration*
@@ -48,7 +51,11 @@ fossil-contents	fossil.txt	/*fossil-contents*
 fossil-introduction	fossil.txt	/*fossil-introduction*
 fossil-mappings	fossil.txt	/*fossil-mappings*
 fossil-status	fossil.txt	/*fossil-status*
+fossil-statusline	fossil.txt	/*fossil-statusline*
 fossil.api.exec()	fossil.txt	/*fossil.api.exec()*
 fossil.api.exec_async()	fossil.txt	/*fossil.api.exec_async()*
 fossil.api.is_checkout()	fossil.txt	/*fossil.api.is_checkout()*
 fossil.txt	fossil.txt	/*fossil.txt*
+fossil_c_CTRL-R_CTRL-G	fossil.txt	/*fossil_c_CTRL-R_CTRL-G*
+fossil_y_CTRL-G	fossil.txt	/*fossil_y_CTRL-G*
+g:fossil_no_maps	fossil.txt	/*g:fossil_no_maps*

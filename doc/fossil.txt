@@ -65,6 +65,14 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 :FossilDifftool [args]                                       *:FossilDifftool*
         Populates the quickfix list with `fossil diff` output.
 
+:FossilDifftool -y [args]                                *:FossilDifftool_-y*
+        Opens each changed file in a new tab, and invokes |:FossilDiffsplit|!
+        against the last committed version.
+
+:FossilMergetool [args]                                     *:FossilMergetool*
+        Populates the quickfix list with `fossil grep "<<<<<<<"` results,
+        acting as a quick jump for merge conflicts.
+
 :FossilGrep {pattern} [file ...]                                 *:FossilGrep*
         Populates the quickfix list with `fossil grep` results.
 
@@ -179,26 +187,73 @@ O               Open the file in a new tab.
 p               Open the file in a preview window.
 )               Jump to the next file.
 (               Jump to the previous file.
+]/              Jump to the next file.
+[/              Jump to the previous file.
+]c              Jump to the next inline diff hunk.
+[c              Jump to the previous inline diff hunk.
+gu              Jump to the Untracked section.
+gU              Jump to the Unstaged/Changes section.
+gs              Jump to the Staged/Changes section.
 dd              Diff split for the file under the cursor.
 dv              Vertical diff split for the file under the cursor.
 ds / dh         Horizontal diff split for the file under the cursor.
 dp              Open a diff output buffer for the file under the cursor.
+dq              Close all diff buffers and run `:diffoff!`.
+d?              Show status window help.
 =               Toggle inline diff under the file.
 >               Insert inline diff under the file.
 <               Remove inline diff under the file.
 s               Add (stage) an untracked file.
 u               Untrack a newly added file.
 -               Toggle add/untrack for new files.
+U               Unstage (rm --soft) all added files.
 X               Discard changes (revert tracked files, clean untracked files).
 cc              Open the commit message buffer.
+c<Space>        Populate the command line with `:Fossil commit `.
+cb<Space>       Populate the command line with `:Fossil branch `.
+co<Space>       Populate the command line with `:Fossil checkout `.
+cr<Space>       Populate the command line with `:Fossil revert `.
+cm<Space>       Populate the command line with `:Fossil merge `.
+r<Space>        Populate the command line with `:Fossil rebase `.
 ll              Open the repository timeline/log (clog).
 czz             Push changes to the stash (fossil stash save).
+cz<Space>       Populate the command line with `:Fossil stash `.
+czA / cza       Apply the most recent stash.
+czP / czp       Pop the most recent stash.
 R               Refresh the status window.
 g?              Open the status help buffer.
 q / gq          Close the status window.
+.               Populate the command line with `:Fossil ` and the file under
+                the cursor.
+
+Global Maps ~
+                                                        *fossil_y_CTRL-G*
+y<C-G>          Yank the relative path of the current buffer within the Fossil
+                repository to the `"` and `0` registers.
+
+                                                        *fossil_c_CTRL-R_CTRL-G*
+<C-R><C-G>      In Command-line mode, insert the relative path of the current
+                buffer.
+
+                                                        *g:fossil_no_maps*
+These global maps can be disabled by setting `g:fossil_no_maps = 1` before the
+plugin loads.
 
 ==============================================================================
-5. Configuration                                        *fossil-configuration*
+5. Statusline                                            *fossil-statusline*
+
+                                                        *FossilStatusline()*
+Add `%{FossilStatusline()}` to your statusline configuration to display the
+current Fossil branch (e.g., `[Fossil(trunk)]`). The output is cached and
+automatically refreshed periodically.
+
+Example statusline snippet:
+>
+        set statusline=%<%f\ %h%m%r%{FossilStatusline()}%=%-14.(%l,%c%V%)\ %P
+<
+
+==============================================================================
+6. Configuration                                        *fossil-configuration*
 
 You can initialize the plugin with `require("fossil").setup(opts)` where
 `opts` is a table of configuration options.
