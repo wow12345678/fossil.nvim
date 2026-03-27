@@ -48,6 +48,12 @@ function M.open_stash_window()
                 )
             else
                 vim.notify("Stash " .. id .. " " .. action .. " successful.", vim.log.levels.INFO)
+                vim.defer_fn(function()
+                    vim.notify(
+                        "Stash UI mappings: <CR>(diff), a(apply), p(pop), d(drop), R(refresh), q(quit)",
+                        vim.log.levels.INFO
+                    )
+                end, 3000)
             end
             refresh()
         end

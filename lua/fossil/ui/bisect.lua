@@ -28,6 +28,12 @@ function M.open_bisect_window()
                 vim.notify("Bisect " .. action .. " failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
             else
                 vim.notify("Bisect " .. action .. " successful.", vim.log.levels.INFO)
+                vim.defer_fn(function()
+                    vim.notify(
+                        "Bisect UI mappings: mg(good), mb(bad), ms(skip), mr(reset), i(status), R(refresh), q(quit)",
+                        vim.log.levels.INFO
+                    )
+                end, 3000)
             end
             refresh()
         end

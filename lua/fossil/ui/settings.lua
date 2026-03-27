@@ -72,6 +72,9 @@ function M.open_settings_window()
                     )
                 else
                     vim.notify("Setting " .. setting_name .. " updated.", vim.log.levels.INFO)
+                    vim.defer_fn(function()
+                        vim.notify("Settings UI mappings: <CR>(edit), R(refresh), q(quit)", vim.log.levels.INFO)
+                    end, 3000)
                 end
                 refresh()
             end
