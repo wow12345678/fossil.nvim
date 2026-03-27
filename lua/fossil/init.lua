@@ -6,7 +6,7 @@ M.command = require("fossil.command")
 
 --- Initialize the plugin (optional config)
 function M.setup(opts)
-	-- Merge opts with defaults if necessary
+    -- Merge opts with defaults if necessary
 end
 
 return M
