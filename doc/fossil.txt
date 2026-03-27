@@ -30,11 +30,12 @@ command directly from Neovim.
 ==============================================================================
 2. Commands                                                  *fossil-commands*
 
-The primary command is |:Fossil|, which can be used to execute any fossil
+The primary command is |:Fossil| (or its alias |:F|), which can be used to execute any fossil
 subcommand or open the status window. Additionally, `fossil.nvim` provides
-shortcut commands that act as aliases for `:Fossil <command>`.
+shortcut commands that act as aliases for `:F[ossil] <command>`.
 
 :Fossil [args]                                                       *:Fossil*
+:F [args]                                                                 *:F*
         Run an arbitrary fossil command. When executed without arguments,
         it opens the Fossil status window (equivalent to `:Fossil status`).
         For example: `:Fossil branch`, `:Fossil timeline`.
@@ -48,161 +49,161 @@ shortcut commands that act as aliases for `:Fossil <command>`.
         Run an arbitrary fossil command, capture output to a temporary buffer,
         and open that buffer in a split window.
 
-:FossilStatus                                                  *:FossilStatus*
+:FStatus                                                  *:FStatus*
         Opens the Fossil status window. See |fossil-status|.
 
-:FossilCommit [args]                                           *:FossilCommit*
+:FCommit [args]                                           *:FCommit*
         Opens a commit buffer to type your commit message. Save and quit
         (:wq) to perform the commit. The commit buffer is automatically
         populated with a commented list of staged and untracked files
         so you have context while writing your message.
 
-:FossilBlame [args]                                             *:FossilBlame*
+:FBlame [args]                                             *:FBlame*
         Opens a blame view in a scroll-bound split for the specified file.
         Also accessible via `:Fossil blame` or `:Fossil annotate`.
 
-:FossilDiffsplit [file]                                     *:FossilDiffsplit*
+:FDiffsplit [file]                                     *:FDiffsplit*
         Opens a diff split for the file (defaults to current buffer).
 
-:FossilVdiffsplit [file]                                   *:FossilVdiffsplit*
+:FVdiffsplit [file]                                   *:FVdiffsplit*
         Opens a vertical diff split for the file.
 
-:FossilHdiffsplit [file]                                   *:FossilHdiffsplit*
+:FHdiffsplit [file]                                   *:FHdiffsplit*
         Opens a horizontal diff split for the file.
 
-:FossilDifftool [args]                                       *:FossilDifftool*
+:FDifftool [args]                                       *:FDifftool*
         Populates the quickfix list with `fossil diff` output.
 
-:FossilDifftool -y [args]                                *:FossilDifftool_-y*
-        Opens each changed file in a new tab, and invokes |:FossilDiffsplit|!
+:FDifftool -y [args]                                *:FDifftool_-y*
+        Opens each changed file in a new tab, and invokes |:FDiffsplit|!
         against the last committed version.
 
-:FossilMergetool [args]                                     *:FossilMergetool*
+:FMergetool [args]                                     *:FMergetool*
         Populates the quickfix list with `fossil grep "<<<<<<<"` results,
         acting as a quick jump for merge conflicts.
 
-:FossilGrep {pattern} [file ...]                                 *:FossilGrep*
+:FGrep {pattern} [file ...]                                 *:FGrep*
         Populates the quickfix list with `fossil grep` results.
 
-:FossilLgrep {pattern} [file ...]                               *:FossilLgrep*
+:FLgrep {pattern} [file ...]                               *:FLgrep*
         Populates the location list with `fossil grep` results.
 
-:FossilClog [args]                                               *:FossilClog*
+:FClog [args]                                               *:FClog*
         Populates the quickfix list with a fossil log listing.
 
-:FossilGllog [args]                                             *:FossilGllog*
+:FGllog [args]                                             *:FGllog*
         Populates the location list with a fossil log listing.
 
-:FossilRead [file]                                               *:FossilRead*
+:FRead [file]                                               *:FRead*
         Reads the file's content from fossil (similar to `:Gread`).
 
-:FossilWrite [file]                                             *:FossilWrite*
+:FWrite [file]                                             *:FWrite*
         Writes the current buffer and adds it to fossil (similar to `:Gwrite`).
 
-:FossilWq [file]                                                   *:FossilWq*
+:FWq [file]                                                   *:FWq*
         Writes, adds, and quits the buffer (similar to `:Gwq`). Use `!` to
         force quit.
 
-:FossilEdit [file]                                               *:FossilEdit*
+:FEdit [file]                                               *:FEdit*
         Opens the file in a new buffer (similar to `:Gedit`).
 
-:FossilSplit [file]                                             *:FossilSplit*
+:FSplit [file]                                             *:FSplit*
         Opens the file in a horizontal split (similar to `:Gsplit`).
 
-:FossilVsplit [file]                                           *:FossilVsplit*
+:FVsplit [file]                                           *:FVsplit*
         Opens the file in a vertical split (similar to `:Gvsplit`).
 
-:FossilTabedit [file]                                         *:FossilTabedit*
+:FTabedit [file]                                         *:FTabedit*
         Opens the file in a new tab (similar to `:Gtabedit`).
 
-:FossilPedit [file]                                             *:FossilPedit*
+:FPedit [file]                                             *:FPedit*
         Opens the file in a preview window (similar to `:Gpedit`).
 
-:FossilDrop [file]                                               *:FossilDrop*
+:FDrop [file]                                               *:FDrop*
         Opens the file using `:drop` (similar to `:Gdrop`).
 
-:FossilBrowse [file]                                           *:FossilBrowse*
+:FBrowse [file]                                           *:FBrowse*
         Opens the file or repo in the browser using the remote URL.
 
-:FossilCheckout [args]                                       *:FossilCheckout*
-:FossilCo [args]                                                   *:FossilCo*
+:FCheckout [args]                                       *:FCheckout*
+:FCo [args]                                                   *:FCo*
         Runs `fossil checkout`.
 
-:FossilBranch [args]                                           *:FossilBranch*
+:FBranch [args]                                           *:FBranch*
         When run without arguments, opens an interactive branch management
         window allowing you to view, checkout, create, and close branches.
         Otherwise passes arguments to `fossil branch`.
 
-:FossilTicket [args]                                           *:FossilTicket*
+:FTicket [args]                                           *:FTicket*
         When run without arguments, opens an interactive ticket window showing
         the project's issue tracker. It allows creating, editing, and viewing
         ticket history. Otherwise passes arguments to `fossil ticket`.
 
-:FossilWiki [args]                                               *:FossilWiki*
+:FWiki [args]                                               *:FWiki*
         When run without arguments, opens an interactive wiki list showing
         the project's wiki pages. It allows fetching, editing, creating, and
         automatically committing wiki pages. Otherwise passes arguments to
         `fossil wiki`.
 
-:FossilTimeline [args]                                       *:FossilTimeline*
+:FTimeline [args]                                       *:FTimeline*
         When run without arguments, opens an interactive timeline window
         displaying repository history. Otherwise passes arguments to
         `fossil timeline`.
 
-:FossilFinfo [args]                                             *:FossilFinfo*
+:FFinfo [args]                                             *:FFinfo*
         Opens an interactive file history window for the current buffer's file,
         allowing you to view past versions and perform two-way diffs.
 
-:FossilTag [args]                                                 *:FossilTag*
+:FTag [args]                                                 *:FTag*
         Runs `fossil tag`.
 
-:FossilShow [args]                                               *:FossilShow*
+:FShow [args]                                               *:FShow*
         Runs `fossil show`.
 
-:FossilInfo [args]                                               *:FossilInfo*
+:FInfo [args]                                               *:FInfo*
         Runs `fossil info`.
 
-:FossilUndo [args]                                               *:FossilUndo*
+:FUndo [args]                                               *:FUndo*
         Runs `fossil undo`. Automatically reloads modified buffers and refreshes
         the Status UI if open.
 
-:FossilRedo [args]                                               *:FossilRedo*
+:FRedo [args]                                               *:FRedo*
         Runs `fossil redo`. Automatically reloads modified buffers and refreshes
         the Status UI if open.
 
-:FossilAdd {file}                                                 *:FossilAdd*
+:FAdd {file}                                                 *:FAdd*
         Adds the specified file to the repository.
 
-:FossilDelete {file}                                           *:FossilDelete*
-:FossilRemove {file}                                           *:FossilRemove*
-:FossilRm {file}                                                   *:FossilRm*
+:FDelete {file}                                           *:FDelete*
+:FRemove {file}                                           *:FRemove*
+:FRm {file}                                                   *:FRm*
         Removes the specified file from the repository.
 
-:FossilUnlink {file}                                           *:FossilUnlink*
+:FUnlink {file}                                           *:FUnlink*
         Removes the file from the repository and filesystem, but keeps the
         (now empty) buffer open.
 
-:FossilMove {source} {destination}                               *:FossilMove*
-:FossilRename {source} {destination}                           *:FossilRename*
+:FMove {source} {destination}                               *:FMove*
+:FRename {source} {destination}                           *:FRename*
         Moves the file from source to destination using `fossil mv`.
 
-:FossilCd                                                           *:FossilCd*
+:FCd                                                           *:FCd*
         Changes the global current working directory to the repository root.
 
-:FossilLcd                                                         *:FossilLcd*
+:FLcd                                                         *:FLcd*
         Changes the window-local current working directory to the repository
         root.
 
-:FossilPush [args]                                               *:FossilPush*
+:FPush [args]                                               *:FPush*
         Runs `fossil push`.
 
-:FossilPull [args]                                               *:FossilPull*
+:FPull [args]                                               *:FPull*
         Runs `fossil pull`.
 
-:FossilSync [args]                                               *:FossilSync*
+:FSync [args]                                               *:FSync*
         Runs `fossil sync`.
 
-:FossilFetch [args]                                             *:FossilFetch*
+:FFetch [args]                                             *:FFetch*
         Runs `fossil fetch`.
 
 ==============================================================================
@@ -250,7 +251,7 @@ q               Close the ticket window.
 6. Wiki Window                                                 *fossil-wiki*
 
 The Wiki Window provides an interactive interface to view, edit, and create
-Fossil wiki pages. Open it with `:Fossil wiki` or `:FossilWiki`.
+Fossil wiki pages. Open it with `:Fossil wiki` or `:FWiki`.
 
 Mappings in the Wiki Window:
 <CR>            Edit the wiki page under the cursor. This opens a new tab where
@@ -262,7 +263,7 @@ q               Close the wiki window.
 7. Timeline Window                                           *fossil-timeline*
 
 The Timeline Window is an interactive interface to view your Fossil project's
-commit history. Open it with `:Fossil timeline` or `:FossilTimeline`.
+commit history. Open it with `:Fossil timeline` or `:FTimeline`.
 
 Mappings in the Timeline Window:
 <CR>            View details about the commit under the cursor (`fossil info`).
@@ -274,7 +275,7 @@ q               Close the timeline window.
 8. File History Window                                         *fossil-finfo*
 
 The File History Window allows you to see the history of a specific file
-and compare versions. Open it with `:Fossil finfo` or `:FossilFinfo`.
+and compare versions. Open it with `:Fossil finfo` or `:FFinfo`.
 
 Mappings in the File History Window:
 <CR>            View the file exactly as it was at the selected commit.

@@ -562,14 +562,14 @@ local function open_help()
         "   R     Refresh the status window",
         "",
         " [ Command Line Population ]",
-        "   c<Space>  Populate command line with :Fossil commit ",
-        "   cb<Space> Populate command line with :Fossil branch ",
-        "   co<Space> Populate command line with :Fossil checkout ",
-        "   cr<Space> Populate command line with :Fossil revert ",
-        "   cm<Space> Populate command line with :Fossil merge ",
-        "   cz<Space> Populate command line with :Fossil stash ",
-        "   r<Space>  Populate command line with :Fossil rebase ",
-        "   .         Populate command line with :Fossil and file under cursor",
+        "   c<Space>  Populate command line with :F commit ",
+        "   cb<Space> Populate command line with :F branch ",
+        "   co<Space> Populate command line with :F checkout ",
+        "   cr<Space> Populate command line with :F revert ",
+        "   cm<Space> Populate command line with :F merge ",
+        "   cz<Space> Populate command line with :F stash ",
+        "   r<Space>  Populate command line with :F rebase ",
+        "   .         Populate command line with :F and file under cursor",
         "",
         " [ General ]",
         "   g?    Show this help message",
@@ -811,31 +811,31 @@ function M.open_status_window()
     end
 
     vim.keymap.set("n", "c<Space>", function()
-        feed(":Fossil commit ")
+        feed(":F commit ")
     end, opts)
     vim.keymap.set("n", "cb<Space>", function()
-        feed(":Fossil branch ")
+        feed(":F branch ")
     end, opts)
     vim.keymap.set("n", "co<Space>", function()
-        feed(":Fossil checkout ")
+        feed(":F checkout ")
     end, opts)
     vim.keymap.set("n", "cr<Space>", function()
-        feed(":Fossil revert ")
+        feed(":F revert ")
     end, opts)
     vim.keymap.set("n", "cm<Space>", function()
-        feed(":Fossil merge ")
+        feed(":F merge ")
     end, opts)
     vim.keymap.set("n", "cz<Space>", function()
-        feed(":Fossil stash ")
+        feed(":F stash ")
     end, opts)
     vim.keymap.set("n", "r<Space>", function()
-        feed(":Fossil rebase ")
+        feed(":F rebase ")
     end, opts)
 
     vim.keymap.set("n", ".", function()
         local filename = get_file_under_cursor()
         if filename then
-            feed(":Fossil " .. filename .. "<C-B><C-Right><Right> ")
+            feed(":F " .. filename .. "<C-B><C-Right><Right> ")
         end
     end, opts)
 

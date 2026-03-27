@@ -12,7 +12,7 @@ function M.show_help()
     local help_lines = {
         "fossil.nvim - A Fossil SCM integration for Neovim",
         "",
-        "Usage: :Fossil <command> [args]",
+        "Usage: :F[ossil] <command> [args]",
         "",
         "COMMANDS",
         "  status",

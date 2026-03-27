@@ -44,23 +44,23 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ## Usage
 
-The primary command is `:Fossil`. For full documentation of all commands, mappings, and APIs, open Neovim and run `:help fossil` or `:help fossil-commands`.
+The primary command is `:Fossil` (or the shorter `:F` alias). For full documentation of all commands, mappings, and APIs, open Neovim and run `:help fossil` or `:help fossil-commands`.
 
 A few common commands to get started:
 
 - `:Fossil` or `:Fossil status`: Opens the interactive Fossil status window.
 - `:Fossil diff [file]`: Opens a scratch buffer with the diff output.
-- `:Fossil commit`: Opens a commit buffer to type your commit message. Save and quit (`:wq`) to perform the commit.
-- `:Fossil branch`: Opens an interactive branch management window.
-- `:Fossil ticket`: Opens an interactive ticket tracker window.
-- `:Fossil wiki`: Opens an interactive wiki page list to edit or create pages.
-- `:Fossil undo` / `:Fossil redo` (or `:FossilUndo` / `:FossilRedo`): Undoes or redoes recent checkout/merge operations.
-- `:Fossil add <file>`: Adds the specified file.
-- `:Fossil rm <file>`: Removes the specified file.
-- `:Fossil blame <file>`: Opens a blame view in a scroll-bound split.
-- `:Fossil wq [file]`: Writes the current buffer, adds it to fossil, and quits (like `:Gwq`).
+- `:Fossil commit` (or `:FCommit`): Opens a commit buffer to type your commit message. Save and quit (`:wq`) to perform the commit.
+- `:Fossil branch` (or `:FBranch`): Opens an interactive branch management window.
+- `:Fossil ticket` (or `:FTicket`): Opens an interactive ticket tracker window.
+- `:Fossil wiki` (or `:FWiki`): Opens an interactive wiki page list to edit or create pages.
+- `:Fossil undo` / `:Fossil redo` (or `:FUndo` / `:FRedo`): Undoes or redoes recent checkout/merge operations.
+- `:Fossil add <file>` (or `:FAdd <file>`): Adds the specified file.
+- `:Fossil rm <file>` (or `:FRm <file>`): Removes the specified file.
+- `:Fossil blame <file>` (or `:FBlame <file>`): Opens a blame view in a scroll-bound split.
+- `:Fossil wq [file]` (or `:FWq [file]`): Writes the current buffer, adds it to fossil, and quits (like `:Gwq`).
 
-You can also run any other fossil command using `:Fossil <command> [args...]`. For example, `:Fossil branch` or `:Fossil timeline`.
+You can also run any other fossil command using `:F[ossil] <command> [args...]`. For example, `:F branch` or `:F timeline`. Every `:Fossil <command>` also has a `:F<command>` variant (like `:FStatus`, `:FCommit`, `:FDiffsplit`, etc).
 
 ## Documentation
 

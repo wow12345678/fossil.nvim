@@ -6,13 +6,7 @@ vim.g.loaded_fossil = 1
 local fossil_command = require("fossil.command")
 
 -- The main :Fossil command
-vim.api.nvim_create_user_command("Fossil", function(opts)
-    local args = vim.deepcopy(opts.fargs)
-    if opts.bang then
-        table.insert(args, 1, "!")
-    end
-    fossil_command.execute(args)
-end, {
+local fossil_cmd_opts = {
     bang = true,
     nargs = "*",
     complete = function(arglead, cmdline, cursorpos)
@@ -61,240 +55,251 @@ end, {
         return matches
     end,
     desc = "Run a fossil command or open the status window (like :Git)",
-})
+}
+
+local fossil_cmd_fn = function(opts)
+    local args = vim.deepcopy(opts.fargs)
+    if opts.bang then
+        table.insert(args, 1, "!")
+    end
+    fossil_command.execute(args)
+end
+
+vim.api.nvim_create_user_command("Fossil", fossil_cmd_fn, fossil_cmd_opts)
+vim.api.nvim_create_user_command("F", fossil_cmd_fn, fossil_cmd_opts)
 
 -- Shortcuts
-vim.api.nvim_create_user_command("FossilStatus", function()
+vim.api.nvim_create_user_command("FStatus", function()
     fossil_command.execute({ "status" })
 end, {})
-vim.api.nvim_create_user_command("FossilCommit", function(opts)
+vim.api.nvim_create_user_command("FCommit", function(opts)
     fossil_command.execute({ "commit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilBlame", function(opts)
+vim.api.nvim_create_user_command("FBlame", function(opts)
     fossil_command.execute({ "blame", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilDiffsplit", function(opts)
+vim.api.nvim_create_user_command("FDiffsplit", function(opts)
     fossil_command.execute({ "diffsplit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilVdiffsplit", function(opts)
+vim.api.nvim_create_user_command("FVdiffsplit", function(opts)
     fossil_command.execute({ "vdiffsplit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilHdiffsplit", function(opts)
+vim.api.nvim_create_user_command("FHdiffsplit", function(opts)
     fossil_command.execute({ "hdiffsplit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilDifftool", function(opts)
+vim.api.nvim_create_user_command("FDifftool", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "difftool", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilMergetool", function(opts)
+vim.api.nvim_create_user_command("FMergetool", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "mergetool", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilGrep", function(opts)
+vim.api.nvim_create_user_command("FGrep", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "grep", unpack(args) })
 end, { bang = true, nargs = "+" })
-vim.api.nvim_create_user_command("FossilClog", function(opts)
+vim.api.nvim_create_user_command("FClog", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "clog", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilRead", function(opts)
+vim.api.nvim_create_user_command("FRead", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "read", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilWrite", function(opts)
+vim.api.nvim_create_user_command("FWrite", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "write", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilEdit", function(opts)
+vim.api.nvim_create_user_command("FEdit", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "edit", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilBrowse", function(opts)
+vim.api.nvim_create_user_command("FBrowse", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "browse", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilCheckout", function(opts)
+vim.api.nvim_create_user_command("FCheckout", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "checkout", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilBranch", function(opts)
+vim.api.nvim_create_user_command("FBranch", function(opts)
     fossil_command.execute({ "branch", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilTicket", function(opts)
+vim.api.nvim_create_user_command("FTicket", function(opts)
     fossil_command.execute({ "ticket", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilWiki", function(opts)
+vim.api.nvim_create_user_command("FWiki", function(opts)
     fossil_command.execute({ "wiki", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilTimeline", function(opts)
+vim.api.nvim_create_user_command("FTimeline", function(opts)
     fossil_command.execute({ "timeline", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilFinfo", function(opts)
+vim.api.nvim_create_user_command("FFinfo", function(opts)
     fossil_command.execute({ "finfo", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilUndo", function(opts)
+vim.api.nvim_create_user_command("FUndo", function(opts)
     fossil_command.execute({ "undo", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilRedo", function(opts)
+vim.api.nvim_create_user_command("FRedo", function(opts)
     fossil_command.execute({ "redo", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilCo", function(opts)
+vim.api.nvim_create_user_command("FCo", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "checkout", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilTag", function(opts)
+vim.api.nvim_create_user_command("FTag", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "tag", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilShow", function(opts)
+vim.api.nvim_create_user_command("FShow", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "show", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilInfo", function(opts)
+vim.api.nvim_create_user_command("FInfo", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "info", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilAdd", function(opts)
+vim.api.nvim_create_user_command("FAdd", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "add", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilDelete", function(opts)
+vim.api.nvim_create_user_command("FDelete", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "delete", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilRemove", function(opts)
+vim.api.nvim_create_user_command("FRemove", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "delete", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilRm", function(opts)
+vim.api.nvim_create_user_command("FRm", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "delete", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilUnlink", function(opts)
+vim.api.nvim_create_user_command("FUnlink", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "unlink", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilMove", function(opts)
+vim.api.nvim_create_user_command("FMove", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "move", unpack(args) })
 end, { bang = true, nargs = "+", complete = "file" })
-vim.api.nvim_create_user_command("FossilRename", function(opts)
+vim.api.nvim_create_user_command("FRename", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "rename", unpack(args) })
 end, { bang = true, nargs = "+", complete = "file" })
-vim.api.nvim_create_user_command("FossilCd", function()
+vim.api.nvim_create_user_command("FCd", function()
     fossil_command.execute({ "cd" })
 end, {})
-vim.api.nvim_create_user_command("FossilLcd", function()
+vim.api.nvim_create_user_command("FLcd", function()
     fossil_command.execute({ "lcd" })
 end, {})
-vim.api.nvim_create_user_command("FossilSplit", function(opts)
+vim.api.nvim_create_user_command("FSplit", function(opts)
     fossil_command.execute({ "split", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilVsplit", function(opts)
+vim.api.nvim_create_user_command("FVsplit", function(opts)
     fossil_command.execute({ "vsplit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilTabedit", function(opts)
+vim.api.nvim_create_user_command("FTabedit", function(opts)
     fossil_command.execute({ "tabedit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilPedit", function(opts)
+vim.api.nvim_create_user_command("FPedit", function(opts)
     fossil_command.execute({ "pedit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilDrop", function(opts)
+vim.api.nvim_create_user_command("FDrop", function(opts)
     fossil_command.execute({ "drop", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilLgrep", function(opts)
+vim.api.nvim_create_user_command("FLgrep", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "lgrep", unpack(args) })
 end, { bang = true, nargs = "+" })
-vim.api.nvim_create_user_command("FossilGllog", function(opts)
+vim.api.nvim_create_user_command("FGllog", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "gllog", unpack(args) })
 end, { bang = true, nargs = "*" })
-vim.api.nvim_create_user_command("FossilWq", function(opts)
+vim.api.nvim_create_user_command("FWq", function(opts)
     local args = vim.deepcopy(opts.fargs)
     if opts.bang then
         table.insert(args, 1, "!")
     end
     fossil_command.execute({ "wq", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
-vim.api.nvim_create_user_command("FossilPush", function(opts)
+vim.api.nvim_create_user_command("FPush", function(opts)
     fossil_command.execute({ "push", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilPull", function(opts)
+vim.api.nvim_create_user_command("FPull", function(opts)
     fossil_command.execute({ "pull", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilSync", function(opts)
+vim.api.nvim_create_user_command("FSync", function(opts)
     fossil_command.execute({ "sync", unpack(opts.fargs) })
 end, { nargs = "*" })
-vim.api.nvim_create_user_command("FossilFetch", function(opts)
+vim.api.nvim_create_user_command("FFetch", function(opts)
     fossil_command.execute({ "fetch", unpack(opts.fargs) })
 end, { nargs = "*" })
 
