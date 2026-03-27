@@ -120,6 +120,26 @@ local function is_file_line(line)
     return false
 end
 
+--- Get a file from a string line in the status window
+--- @param line string The line content
+--- @return string|nil filename The filename
+--- @return string|nil state The state of the file (e.g. "ADDED", "EDITED", "UNTRACKED")
+local function parse_file_line(line)
+    -- Match "  ADDED      filename" or "  EDITED     filename"
+    local state, filename = line:match("^%s+([A-Z]+)%s+(.+)$")
+    if state and filename then
+        return filename, state
+    end
+
+    -- Match "  ? filename"
+    local untracked_file = line:match("^%s+%?%s+(.+)$")
+    if untracked_file then
+        return untracked_file, "UNTRACKED"
+    end
+
+    return nil, nil
+end
+
 --- Jump to next or previous file in the status buffer
 --- @param direction number 1 for next, -1 for previous
 local function jump_to_file(direction)
@@ -155,16 +175,9 @@ local function get_file_under_cursor()
         end
     end
 
-    -- Match "  ADDED      filename" or "  EDITED     filename"
-    local state, filename = line:match("^%s+([A-Z]+)%s+(.+)$")
-    if state and filename then
+    local filename, state = parse_file_line(line)
+    if filename then
         return filename, state, line_nr
-    end
-
-    -- Match "  ? filename"
-    local untracked_file = line:match("^%s+%?%s+(.+)$")
-    if untracked_file then
-        return untracked_file, "UNTRACKED", line_nr
     end
 
     return nil, nil, nil
@@ -234,7 +247,186 @@ end
 --- @param action_type string The action to perform
 local function file_action(action_type)
     local filename, state, file_line = get_file_under_cursor()
+
+    -- If no file under cursor, check if it's a section header
     if not filename then
+        local line_nr = vim.api.nvim_win_get_cursor(0)[1]
+        local line = vim.api.nvim_get_current_line()
+        if line:match("^[A-Za-z]+:$") then
+            -- We are on a section header. Gather all files in this section.
+            local total_lines = vim.api.nvim_buf_line_count(M.buf)
+            local files = {}
+            for i = line_nr + 1, total_lines do
+                local next_line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
+                if next_line == "" or next_line:match("^[A-Za-z]+:$") then
+                    break -- End of section
+                end
+                local f, s = parse_file_line(next_line)
+                if f then
+                    table.insert(files, { filename = f, state = s })
+                end
+            end
+
+            if #files == 0 then
+                return
+            end
+
+            local commands_to_run = {}
+            local applied_count = 0
+
+            if action_type == "stage" then
+                local to_add = {}
+                local to_rm = {}
+                for _, f in ipairs(files) do
+                    if f.state == "UNTRACKED" then
+                        table.insert(to_add, f.filename)
+                    elseif f.state == "MISSING" then
+                        table.insert(to_rm, f.filename)
+                    end
+                end
+                if #to_add > 0 then
+                    local cmd = { "add" }
+                    for _, file in ipairs(to_add) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_add
+                end
+                if #to_rm > 0 then
+                    local cmd = { "rm" }
+                    for _, file in ipairs(to_rm) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_rm
+                end
+            elseif action_type == "unstage" then
+                local to_rm_soft = {}
+                local to_revert = {}
+                for _, f in ipairs(files) do
+                    if f.state == "ADDED" then
+                        table.insert(to_rm_soft, f.filename)
+                    elseif f.state == "DELETED" then
+                        table.insert(to_revert, f.filename)
+                    end
+                end
+                if #to_rm_soft > 0 then
+                    local cmd = { "rm", "--soft" }
+                    for _, file in ipairs(to_rm_soft) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_rm_soft
+                end
+                if #to_revert > 0 then
+                    local cmd = { "revert" }
+                    for _, file in ipairs(to_revert) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_revert
+                end
+            elseif action_type == "toggle" then
+                local to_add = {}
+                local to_rm_soft = {}
+                local to_rm = {}
+                local to_revert = {}
+                for _, f in ipairs(files) do
+                    if f.state == "UNTRACKED" then
+                        table.insert(to_add, f.filename)
+                    elseif f.state == "ADDED" then
+                        table.insert(to_rm_soft, f.filename)
+                    elseif f.state == "MISSING" then
+                        table.insert(to_rm, f.filename)
+                    elseif f.state == "DELETED" then
+                        table.insert(to_revert, f.filename)
+                    end
+                end
+                if #to_add > 0 then
+                    local cmd = { "add" }
+                    for _, file in ipairs(to_add) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_add
+                end
+                if #to_rm_soft > 0 then
+                    local cmd = { "rm", "--soft" }
+                    for _, file in ipairs(to_rm_soft) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_rm_soft
+                end
+                if #to_rm > 0 then
+                    local cmd = { "rm" }
+                    for _, file in ipairs(to_rm) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_rm
+                end
+                if #to_revert > 0 then
+                    local cmd = { "revert" }
+                    for _, file in ipairs(to_revert) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_revert
+                end
+            elseif action_type == "discard" then
+                local to_clean = {}
+                local to_rm = {}
+                local to_revert = {}
+                for _, f in ipairs(files) do
+                    if f.state == "UNTRACKED" then
+                        table.insert(to_clean, f.filename)
+                    elseif f.state == "ADDED" then
+                        table.insert(to_rm, f.filename)
+                    else
+                        table.insert(to_revert, f.filename)
+                    end
+                end
+                if #to_clean > 0 then
+                    local cmd = { "clean", "--force" }
+                    for _, file in ipairs(to_clean) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_clean
+                end
+                if #to_rm > 0 then
+                    local cmd = { "rm" }
+                    for _, file in ipairs(to_rm) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_rm
+                end
+                if #to_revert > 0 then
+                    local cmd = { "revert" }
+                    for _, file in ipairs(to_revert) do
+                        table.insert(cmd, file)
+                    end
+                    table.insert(commands_to_run, cmd)
+                    applied_count = applied_count + #to_revert
+                end
+            end
+
+            if #commands_to_run > 0 then
+                for _, cmd in ipairs(commands_to_run) do
+                    api.exec(cmd)
+                end
+                M.refresh()
+                vim.notify(
+                    "Applied action '" .. action_type .. "' to " .. applied_count .. " files.",
+                    vim.log.levels.INFO
+                )
+            else
+                vim.notify("No valid files for action '" .. action_type .. "'.", vim.log.levels.INFO)
+            end
+            return
+        end
         return
     end
 
