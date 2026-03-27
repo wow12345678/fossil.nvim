@@ -596,7 +596,26 @@ function M.open_status_window()
             vim.cmd(win .. "wincmd w")
             M.refresh()
             return
+        else
+            -- Buffer exists but is hidden, split and switch to it
+            vim.cmd("botright sbuffer " .. M.buf)
+            M.refresh()
+            return
         end
+    end
+
+    -- If M.buf got lost but the buffer actually still exists by name, find it
+    local existing_bufnr = vim.fn.bufnr("^Fossil Status$")
+    if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
+        M.buf = existing_bufnr
+        local win = vim.fn.bufwinnr(M.buf)
+        if win ~= -1 then
+            vim.cmd(win .. "wincmd w")
+        else
+            vim.cmd("botright sbuffer " .. M.buf)
+        end
+        M.refresh()
+        return
     end
 
     vim.cmd("botright new")
