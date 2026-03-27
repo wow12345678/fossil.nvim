@@ -612,7 +612,6 @@ local function open_help()
         "   dh    Open diff in a horizontal split",
         "   dp    Show plain diff output in a scratch buffer",
         "   dq    Close all diff buffers and run :diffoff!",
-        "   d?    Show status window help",
         "   =     Toggle inline diff for the file under cursor",
         "   >     Expand inline diff for the file",
         "   <     Collapse inline diff for the file",
@@ -797,9 +796,6 @@ function M.open_status_window()
     end, opts)
     vim.keymap.set("n", "dq", function()
         vim.cmd("only | diffoff!")
-    end, opts)
-    vim.keymap.set("n", "d?", function()
-        open_help()
     end, opts)
     vim.keymap.set("n", "=", function()
         file_action("inline_toggle")
