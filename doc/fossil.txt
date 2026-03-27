@@ -1,0 +1,204 @@
+*fossil.txt*    A Neovim plugin for Fossil SCM, inspired by vim-fugitive.
+
+Author:  fossil.nvim Contributors
+License: MIT
+
+==============================================================================
+CONTENTS                                                     *fossil-contents*
+
+1. Introduction .......................................... |fossil-introduction|
+2. Commands .............................................. |fossil-commands|
+3. Status Window ......................................... |fossil-status|
+4. Mappings .............................................. |fossil-mappings|
+5. Configuration ......................................... |fossil-configuration|
+6. Lua API ............................................... |fossil-api|
+
+==============================================================================
+1. Introduction                                          *fossil-introduction*
+
+`fossil.nvim` provides a set of tools to interact with your Fossil
+repositories without leaving your editor. It features a status window to view
+changes, stage, and commit files, as well as commands to run any `fossil`
+command directly from Neovim.
+
+==============================================================================
+2. Commands                                                  *fossil-commands*
+
+The primary command is |:Fossil|, which can be used to execute any fossil
+subcommand or open the status window. Additionally, `fossil.nvim` provides
+shortcut commands that act as aliases for `:Fossil <command>`.
+
+:Fossil [args]                                                       *:Fossil*
+        Run an arbitrary fossil command. When executed without arguments,
+        it opens the Fossil status window (equivalent to `:Fossil status`).
+        For example: `:Fossil branch`, `:Fossil timeline`.
+
+:FossilStatus                                                  *:FossilStatus*
+        Opens the Fossil status window. See |fossil-status|.
+
+:FossilCommit [args]                                           *:FossilCommit*
+        Opens a commit buffer to type your commit message. Save and quit
+        (:wq) to perform the commit.
+
+:FossilBlame [args]                                             *:FossilBlame*
+        Opens a blame view in a scroll-bound split for the specified file.
+        Also accessible via `:Fossil blame` or `:Fossil annotate`.
+
+:FossilDiffsplit [file]                                     *:FossilDiffsplit*
+        Opens a diff split for the file (defaults to current buffer).
+
+:FossilVdiffsplit [file]                                   *:FossilVdiffsplit*
+        Opens a vertical diff split for the file.
+
+:FossilHdiffsplit [file]                                   *:FossilHdiffsplit*
+        Opens a horizontal diff split for the file.
+
+:FossilDifftool [args]                                       *:FossilDifftool*
+        Populates the quickfix list with `fossil diff` output.
+
+:FossilGrep {pattern} [file ...]                                 *:FossilGrep*
+        Populates the quickfix list with `fossil grep` results.
+
+:FossilClog [args]                                               *:FossilClog*
+        Populates the quickfix list with a fossil log listing.
+
+:FossilRead [file]                                               *:FossilRead*
+        Reads the file's content from fossil (similar to `:Gread`).
+
+:FossilWrite [file]                                             *:FossilWrite*
+        Writes the current buffer and adds it to fossil (similar to `:Gwrite`).
+
+:FossilEdit [file]                                               *:FossilEdit*
+        Opens the file in a new buffer (similar to `:Gedit`).
+
+:FossilBrowse [file]                                           *:FossilBrowse*
+        Opens the file or repo in the browser using the remote URL.
+
+:FossilCheckout [args]                                       *:FossilCheckout*
+:FossilCo [args]                                                   *:FossilCo*
+        Runs `fossil checkout`.
+
+:FossilTag [args]                                                 *:FossilTag*
+        Runs `fossil tag`.
+
+:FossilShow [args]                                               *:FossilShow*
+        Runs `fossil show`.
+
+:FossilInfo [args]                                               *:FossilInfo*
+        Runs `fossil info`.
+
+:FossilAdd {file}                                                 *:FossilAdd*
+        Adds the specified file to the repository.
+
+:FossilDelete {file}                                           *:FossilDelete*
+:FossilRemove {file}                                           *:FossilRemove*
+:FossilRm {file}                                                   *:FossilRm*
+        Removes the specified file from the repository.
+
+:FossilMove {source} {destination}                               *:FossilMove*
+        Moves the file from source to destination using `fossil mv`.
+
+:FossilCd                                                           *:FossilCd*
+        Changes the global current working directory to the repository root.
+
+:FossilLcd                                                         *:FossilLcd*
+        Changes the window-local current working directory to the repository
+        root.
+
+:FossilPush [args]                                               *:FossilPush*
+        Runs `fossil push`.
+
+:FossilPull [args]                                               *:FossilPull*
+        Runs `fossil pull`.
+
+:FossilSync [args]                                               *:FossilSync*
+        Runs `fossil sync`.
+
+:FossilFetch [args]                                             *:FossilFetch*
+        Runs `fossil fetch`.
+
+==============================================================================
+3. Status Window                                               *fossil-status*
+
+The Status Window is the primary interface for interacting with your
+repository's current state. It displays a list of untracked, added, edited,
+and deleted files.
+
+From this window, you can view diffs, stage (add) or unstage (rm) files,
+and initiate a commit. Open it with `:Fossil` or `:Fossil status`.
+
+==============================================================================
+4. Mappings                                                  *fossil-mappings*
+
+When the status window is open, you can use the following default mappings
+(Fugitive-inspired):
+
+<CR>            Open the file under the cursor.
+o               Open the file in a horizontal split.
+gO              Open the file in a vertical split.
+O               Open the file in a new tab.
+p               Open the file in a preview window.
+)               Jump to the next file.
+(               Jump to the previous file.
+dd              Diff split for the file under the cursor.
+dv              Vertical diff split for the file under the cursor.
+ds / dh         Horizontal diff split for the file under the cursor.
+dp              Open a diff output buffer for the file under the cursor.
+=               Toggle inline diff under the file.
+>               Insert inline diff under the file.
+<               Remove inline diff under the file.
+s               Add (stage) an untracked file.
+u               Untrack a newly added file.
+-               Toggle add/untrack for new files.
+X               Discard changes (revert tracked files, clean untracked files).
+cc              Open the commit message buffer.
+ll              Open the repository timeline/log (clog).
+czz             Push changes to the stash (fossil stash save).
+R               Refresh the status window.
+g?              Open the status help buffer.
+q / gq          Close the status window.
+
+==============================================================================
+5. Configuration                                        *fossil-configuration*
+
+You can initialize the plugin with `require("fossil").setup(opts)` where
+`opts` is a table of configuration options.
+
+Currently, configuration options are reserved for future use. Example setup:
+
+>lua
+    require('fossil').setup({})
+<
+
+==============================================================================
+6. Lua API                                                        *fossil-api*
+
+`fossil.nvim` exposes a few functions in its `require('fossil.api')` module
+for programmatic interactions with Fossil from Neovim lua scripts.
+
+fossil.api.exec({args}, {cwd})                            *fossil.api.exec()*
+        Run a fossil command synchronously.
+        Parameters:
+            {args} (table) - A list of arguments (e.g., `{"status"}`).
+            {cwd} (string|nil) - Optional working directory.
+        Returns:
+            (table) - A list of lines from stdout/stderr.
+            (number) - Exit code.
+
+fossil.api.exec_async({args}, {cwd}, {callback})    *fossil.api.exec_async()*
+        Run a fossil command asynchronously.
+        Parameters:
+            {args} (table) - A list of arguments (e.g., `{"status"}`).
+            {cwd} (string|nil) - Optional working directory.
+            {callback} (function) - Called on completion with
+                `(output_lines, exit_code)`.
+
+fossil.api.is_checkout({dir})                      *fossil.api.is_checkout()*
+        Check if a given directory (or current directory) is a fossil checkout.
+        Parameters:
+            {dir} (string|nil) - The directory to check.
+        Returns:
+            (boolean) - True if the directory is inside a fossil checkout.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
