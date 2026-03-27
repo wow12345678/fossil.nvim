@@ -1,6 +1,6 @@
 *fossil.txt*    A Neovim plugin for Fossil SCM, inspired by vim-fugitive.
 
-Author:  fossil.nvim Contributors
+Author:  Finn Weidner (@wow12345678)
 License: MIT
 
 ==============================================================================
