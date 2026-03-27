@@ -294,11 +294,12 @@ q               Close the file history window.
 When the status window is open, you can use the following default mappings
 (Fugitive-inspired):
 
-<CR>            Open the file under the cursor.
-o               Open the file in a horizontal split.
-gO              Open the file in a vertical split.
-O               Open the file in a new tab.
-p               Open the file in a preview window.
+[ File Navigation ]
+<CR>            Open file under cursor in current window.
+o               Open file in a new horizontal split.
+gO              Open file in a new vertical split.
+O               Open file in a new tab.
+p               Open file in preview window.
 )               Jump to the next file.
 (               Jump to the previous file.
 ]/              Jump to the next file.
@@ -308,38 +309,48 @@ p               Open the file in a preview window.
 gu              Jump to the Untracked section.
 gU              Jump to the Unstaged/Changes section.
 gs              Jump to the Staged/Changes section.
-dd              Diff split for the file under the cursor.
-dv              Vertical diff split for the file under the cursor.
-ds / dh         Horizontal diff split for the file under the cursor.
-dp              Open a diff output buffer for the file under the cursor.
-dq              Close all diff buffers and run `:diffoff!`.
-d?              Show status window help.
-=               Toggle inline diff under the file.
->               Insert inline diff under the file.
-<               Remove inline diff under the file.
-s               Add (stage) an untracked file.
-u               Untrack a newly added file.
--               Toggle add/untrack for new files.
+
+[ Staging & Discarding ]
+s               Stage (add) file or section under cursor.
+u               Unstage (untrack) file or section under cursor.
+-               Toggle stage/unstage status for file or section under cursor.
 U               Unstage (rm --soft) all added files.
-X               Discard changes (revert tracked files, clean untracked files).
-cc              Open the commit message buffer.
-c<Space>        Populate the command line with `:Fossil commit `.
-cb<Space>       Populate the command line with `:Fossil branch `.
-co<Space>       Populate the command line with `:Fossil checkout `.
-cr<Space>       Populate the command line with `:Fossil revert `.
-cm<Space>       Populate the command line with `:Fossil merge `.
-cl              Open the repository timeline/log (clog).
+X               Discard changes for file or section under cursor.
+
+[ Diffing & Review ]
+dd              Open diff in a split (internal default).
+dv              Open diff in a vertical split.
+ds              Open diff in a horizontal split.
+dh              Open diff in a horizontal split.
+dp              Show plain diff output in a scratch buffer.
+dq              Close all diff buffers and run :diffoff!.
+=               Toggle inline diff for the file under cursor.
+>               Expand inline diff for the file.
+<               Collapse inline diff for the file.
+
+[ Repository Actions ]
+cc              Open commit window to commit staged changes.
+cl              Open the repository timeline/log.
 czz             Push changes to the stash (fossil stash save).
-cz<Space>       Populate the command line with `:Fossil stash `.
-cza             Select a stash to apply from a menu.
-czp             Select a stash to pop from a menu.
+cza             Select a stash to apply.
+czp             Select a stash to pop.
 czA             Apply the most recent stash instantly.
 czP             Pop the most recent stash instantly.
 R               Refresh the status window.
-g?              Open the status help buffer.
-q / gq          Close the status window.
-.               Populate the command line with `:Fossil ` and the file under
-                the cursor.
+
+[ Command Line Population ]
+c<Space>        Populate command line with :Fossil commit .
+cb<Space>       Populate command line with :Fossil branch .
+co<Space>       Populate command line with :Fossil checkout .
+cr<Space>       Populate command line with :Fossil revert .
+cm<Space>       Populate command line with :Fossil merge .
+cz<Space>       Populate command line with :Fossil stash .
+.               Populate command line with :Fossil and file under cursor.
+
+[ General ]
+g?              Jump to this help message.
+gq              Close the status window.
+q               Close the status window.
 
 Global Maps ~
                                                         *fossil_y_CTRL-G*

@@ -11,14 +11,36 @@ local function get_status_lines()
     end
 
     local lines = {}
+    local head = "unknown"
+    local checkout_hash = ""
 
     -- Extract header info
     for _, line in ipairs(status_out) do
         if line:match("^[A-Z]+") then
             break -- Start of file changes
         end
-        table.insert(lines, line)
+        local tags = line:match("^tags:%s+(.*)")
+        if tags then
+            head = tags
+        end
+        local chk = line:match("^checkout:%s+(%w+)")
+        if chk then
+            checkout_hash = string.sub(chk, 1, 10)
+        end
     end
+
+    if checkout_hash ~= "" then
+        head = head .. " (" .. checkout_hash .. ")"
+    end
+
+    table.insert(lines, "Head: " .. head)
+
+    local remote_out, r_code = api.exec({ "remote" })
+    if r_code == 0 and #remote_out > 0 and remote_out[1] ~= "off" then
+        table.insert(lines, "Remote: " .. remote_out[1])
+    end
+
+    table.insert(lines, "Help: g?")
     table.insert(lines, "")
 
     -- Extract changes
@@ -101,7 +123,7 @@ local function open_file(filename, mode)
     end
 end
 
-local INLINE_PREFIX = "  | "
+local INLINE_PREFIX = "    "
 
 local function is_inline_diff_line(line)
     return line:sub(1, #INLINE_PREFIX) == INLINE_PREFIX
@@ -635,17 +657,17 @@ function M.open_status_window()
 		  finish
 		endif
 
-		syn match fossilDiffAdd    "^  | +.*"
-		syn match fossilDiffRemove "^  | -.*"
-		syn match fossilDiffHunk   "^  | @@.*"
-		syn match fossilDiffHeader "^  | Index:.*"
-		syn match fossilDiffHeader "^  | ===.*"
-		syn match fossilDiffHeader "^  | ---.*"
-		syn match fossilDiffHeader "^  | +++.*"
+		syn match fossilDiffAdd    "^    +.*"
+		syn match fossilDiffRemove "^    -.*"
+		syn match fossilDiffHunk   "^    @@.*"
+		syn match fossilDiffHeader "^    Index:.*"
+		syn match fossilDiffHeader "^    ===.*"
+		syn match fossilDiffHeader "^    ---.*"
+		syn match fossilDiffHeader "^    +++.*"
 
-		hi def link fossilDiffAdd    Added
-		hi def link fossilDiffRemove Removed
-		hi def link fossilDiffHunk   Title
+		hi def link fossilDiffAdd    DiffAdd
+		hi def link fossilDiffRemove DiffDelete
+		hi def link fossilDiffHunk   DiffChange
 		hi def link fossilDiffHeader Type
 
 		let b:current_syntax = "fossil-inline-diff"
@@ -838,7 +860,7 @@ function M.open_status_window()
 
     -- Help
     vim.keymap.set("n", "g?", function()
-        require("fossil.ui.status_help").open_help()
+        vim.cmd("help fossil-mappings")
     end, opts)
 
     -- Quit
