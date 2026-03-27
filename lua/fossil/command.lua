@@ -180,6 +180,9 @@ local commands = {
         end
     end,
     tag = ops.tag,
+    bisect = require("fossil.ui.bisect").open_bisect_window,
+    settings = require("fossil.ui.settings").open_settings_window,
+    stash = require("fossil.ui.stash").open_stash_window,
     show = ops.show,
     info = ops.show,
     undo = ops.undo,

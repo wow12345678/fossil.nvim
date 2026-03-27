@@ -4,6 +4,41 @@ local util = require("fossil.util")
 
 local M = {}
 
+local function open_diff_tab(hash1, out1, hash2, out2, tgt)
+    vim.cmd("tabnew")
+    local b2 = vim.api.nvim_get_current_buf()
+    vim.api.nvim_buf_set_name(
+        b2,
+        "fossil://" .. hash2 .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
+    )
+    vim.api.nvim_buf_set_lines(b2, 0, -1, false, out2)
+    local ft = vim.filetype.match({ filename = tgt })
+    if ft then
+        vim.api.nvim_set_option_value("filetype", ft, { buf = b2 })
+    end
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = b2 })
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b2 })
+    vim.api.nvim_set_option_value("swapfile", false, { buf = b2 })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = b2 })
+    vim.cmd("diffthis")
+
+    vim.cmd("rightbelow vsplit")
+    local b1 = vim.api.nvim_get_current_buf()
+    vim.api.nvim_buf_set_name(
+        b1,
+        "fossil://" .. hash1 .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
+    )
+    vim.api.nvim_buf_set_lines(b1, 0, -1, false, out1)
+    if ft then
+        vim.api.nvim_set_option_value("filetype", ft, { buf = b1 })
+    end
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = b1 })
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b1 })
+    vim.api.nvim_set_option_value("swapfile", false, { buf = b1 })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = b1 })
+    vim.cmd("diffthis")
+end
+
 --- Format: `2026-03-27 [e829a478ac] mod test (user: fw, artifact: [b314e28493], branch: trunk)`
 local function get_hash_under_cursor()
     local line = vim.api.nvim_get_current_line()
@@ -183,38 +218,7 @@ function M.open_finfo_window(args)
         local out2, c2 = api.exec({ "cat", tgt, "-r", prev_hash })
 
         if c1 == 0 and c2 == 0 then
-            vim.cmd("tabnew")
-            local b2 = vim.api.nvim_get_current_buf()
-            vim.api.nvim_buf_set_name(
-                b2,
-                "fossil://" .. prev_hash .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
-            )
-            vim.api.nvim_buf_set_lines(b2, 0, -1, false, out2)
-            local ft = vim.filetype.match({ filename = tgt })
-            if ft then
-                vim.api.nvim_set_option_value("filetype", ft, { buf = b2 })
-            end
-            vim.api.nvim_set_option_value("buftype", "nofile", { buf = b2 })
-            vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b2 })
-            vim.api.nvim_set_option_value("swapfile", false, { buf = b2 })
-            vim.api.nvim_set_option_value("modifiable", false, { buf = b2 })
-            vim.cmd("diffthis")
-
-            vim.cmd("rightbelow vsplit")
-            local b1 = vim.api.nvim_get_current_buf()
-            vim.api.nvim_buf_set_name(
-                b1,
-                "fossil://" .. hash .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
-            )
-            vim.api.nvim_buf_set_lines(b1, 0, -1, false, out1)
-            if ft then
-                vim.api.nvim_set_option_value("filetype", ft, { buf = b1 })
-            end
-            vim.api.nvim_set_option_value("buftype", "nofile", { buf = b1 })
-            vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b1 })
-            vim.api.nvim_set_option_value("swapfile", false, { buf = b1 })
-            vim.api.nvim_set_option_value("modifiable", false, { buf = b1 })
-            vim.cmd("diffthis")
+            open_diff_tab(hash, out1, prev_hash, out2, tgt)
         else
             vim.notify("Failed to get file contents for diff.", vim.log.levels.ERROR)
         end
@@ -255,38 +259,7 @@ function M.open_finfo_window(args)
         local out2, c2 = api.exec({ "cat", tgt, "-r", marked })
 
         if c1 == 0 and c2 == 0 then
-            vim.cmd("tabnew")
-            local b2 = vim.api.nvim_get_current_buf()
-            vim.api.nvim_buf_set_name(
-                b2,
-                "fossil://" .. marked .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
-            )
-            vim.api.nvim_buf_set_lines(b2, 0, -1, false, out2)
-            local ft = vim.filetype.match({ filename = tgt })
-            if ft then
-                vim.api.nvim_set_option_value("filetype", ft, { buf = b2 })
-            end
-            vim.api.nvim_set_option_value("buftype", "nofile", { buf = b2 })
-            vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b2 })
-            vim.api.nvim_set_option_value("swapfile", false, { buf = b2 })
-            vim.api.nvim_set_option_value("modifiable", false, { buf = b2 })
-            vim.cmd("diffthis")
-
-            vim.cmd("rightbelow vsplit")
-            local b1 = vim.api.nvim_get_current_buf()
-            vim.api.nvim_buf_set_name(
-                b1,
-                "fossil://" .. hash .. "/" .. vim.fn.fnamemodify(tgt, ":t") .. " - " .. tostring(os.time())
-            )
-            vim.api.nvim_buf_set_lines(b1, 0, -1, false, out1)
-            if ft then
-                vim.api.nvim_set_option_value("filetype", ft, { buf = b1 })
-            end
-            vim.api.nvim_set_option_value("buftype", "nofile", { buf = b1 })
-            vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = b1 })
-            vim.api.nvim_set_option_value("swapfile", false, { buf = b1 })
-            vim.api.nvim_set_option_value("modifiable", false, { buf = b1 })
-            vim.cmd("diffthis")
+            open_diff_tab(hash, out1, marked, out2, tgt)
         else
             vim.notify("Failed to get file contents for diff.", vim.log.levels.ERROR)
         end
