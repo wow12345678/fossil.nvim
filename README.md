@@ -6,10 +6,16 @@ A Neovim plugin for Fossil SCM, inspired by [vim-fugitive](https://github.com/tp
 
 ## Features
 
-- **Status Window**: A dedicated interactive window to view untracked, added, and edited files.
+- **Status Window**: A dedicated interactive window to view untracked, added, edited, and missing files. Emulates a staging area with mappings like `-` to selectively track untracked files or remove missing files.
 - **Diff View**: Quickly view diffs of your changes with Neovim's syntax highlighting.
-- **Commit Flow**: Write commit messages directly in a Neovim buffer.
+- **Commit Flow**: Write commit messages directly in a Neovim buffer. The commit buffer is automatically populated with a commented list of staged and untracked files so you have context while writing your message.
+- **Interactive Timeline**: View the repository log (`fossil timeline`), view commit details, diffs, and easily checkout past check-ins.
+- **File History**: Track the history of the current file (`fossil finfo`), view older versions, or perform two-way diffs between historic versions and your working copy.
 - **Blame/Annotate**: View blame/annotation for a file in a dedicated buffer.
+- **Branch Management**: Interactive UI to view, checkout, create, and close branches.
+- **Ticket Tracking**: Interactive UI to view tickets, edit ticket fields, create tickets, and read ticket history directly inside Neovim.
+- **Wiki Management**: Browse and edit Fossil wiki pages (`fossil wiki`). Changes are committed back automatically on buffer save.
+- **Workspace State Management**: Seamlessly run undo and redo commands (`:Fossil undo` / `:Fossil redo`) that automatically update Neovim buffers and status UI.
 - **Seamless Commands**: Run fossil commands, map outputs to quickfix/location lists, background processes, or open output in splits.
 
 ## Installation
@@ -45,6 +51,10 @@ A few common commands to get started:
 - `:Fossil` or `:Fossil status`: Opens the interactive Fossil status window.
 - `:Fossil diff [file]`: Opens a scratch buffer with the diff output.
 - `:Fossil commit`: Opens a commit buffer to type your commit message. Save and quit (`:wq`) to perform the commit.
+- `:Fossil branch`: Opens an interactive branch management window.
+- `:Fossil ticket`: Opens an interactive ticket tracker window.
+- `:Fossil wiki`: Opens an interactive wiki page list to edit or create pages.
+- `:Fossil undo` / `:Fossil redo` (or `:FossilUndo` / `:FossilRedo`): Undoes or redoes recent checkout/merge operations.
 - `:Fossil add <file>`: Adds the specified file.
 - `:Fossil rm <file>`: Removes the specified file.
 - `:Fossil blame <file>`: Opens a blame view in a scroll-bound split.

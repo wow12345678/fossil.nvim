@@ -9,9 +9,15 @@ CONTENTS                                                     *fossil-contents*
 1. Introduction .......................................... |fossil-introduction|
 2. Commands .............................................. |fossil-commands|
 3. Status Window ......................................... |fossil-status|
-4. Mappings .............................................. |fossil-mappings|
-5. Configuration ......................................... |fossil-configuration|
-6. Lua API ............................................... |fossil-api|
+4. Branch Window ......................................... |fossil-branch|
+5. Ticket Window ......................................... |fossil-ticket|
+6. Wiki Window ........................................... |fossil-wiki|
+7. Timeline Window ....................................... |fossil-timeline|
+8. File History Window ................................... |fossil-finfo|
+9. Mappings .............................................. |fossil-mappings|
+10. Statusline ............................................ |fossil-statusline|
+11. Configuration ......................................... |fossil-configuration|
+12. Lua API ............................................... |fossil-api|
 
 ==============================================================================
 1. Introduction                                          *fossil-introduction*
@@ -47,7 +53,9 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 
 :FossilCommit [args]                                           *:FossilCommit*
         Opens a commit buffer to type your commit message. Save and quit
-        (:wq) to perform the commit.
+        (:wq) to perform the commit. The commit buffer is automatically
+        populated with a commented list of staged and untracked files
+        so you have context while writing your message.
 
 :FossilBlame [args]                                             *:FossilBlame*
         Opens a blame view in a scroll-bound split for the specified file.
@@ -120,6 +128,31 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 :FossilCo [args]                                                   *:FossilCo*
         Runs `fossil checkout`.
 
+:FossilBranch [args]                                           *:FossilBranch*
+        When run without arguments, opens an interactive branch management
+        window allowing you to view, checkout, create, and close branches.
+        Otherwise passes arguments to `fossil branch`.
+
+:FossilTicket [args]                                           *:FossilTicket*
+        When run without arguments, opens an interactive ticket window showing
+        the project's issue tracker. It allows creating, editing, and viewing
+        ticket history. Otherwise passes arguments to `fossil ticket`.
+
+:FossilWiki [args]                                               *:FossilWiki*
+        When run without arguments, opens an interactive wiki list showing
+        the project's wiki pages. It allows fetching, editing, creating, and
+        automatically committing wiki pages. Otherwise passes arguments to
+        `fossil wiki`.
+
+:FossilTimeline [args]                                       *:FossilTimeline*
+        When run without arguments, opens an interactive timeline window
+        displaying repository history. Otherwise passes arguments to
+        `fossil timeline`.
+
+:FossilFinfo [args]                                             *:FossilFinfo*
+        Opens an interactive file history window for the current buffer's file,
+        allowing you to view past versions and perform two-way diffs.
+
 :FossilTag [args]                                                 *:FossilTag*
         Runs `fossil tag`.
 
@@ -128,6 +161,14 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 
 :FossilInfo [args]                                               *:FossilInfo*
         Runs `fossil info`.
+
+:FossilUndo [args]                                               *:FossilUndo*
+        Runs `fossil undo`. Automatically reloads modified buffers and refreshes
+        the Status UI if open.
+
+:FossilRedo [args]                                               *:FossilRedo*
+        Runs `fossil redo`. Automatically reloads modified buffers and refreshes
+        the Status UI if open.
 
 :FossilAdd {file}                                                 *:FossilAdd*
         Adds the specified file to the repository.
@@ -169,13 +210,85 @@ shortcut commands that act as aliases for `:Fossil <command>`.
 
 The Status Window is the primary interface for interacting with your
 repository's current state. It displays a list of untracked, added, edited,
-and deleted files.
+missing, and deleted files.
 
 From this window, you can view diffs, stage (add) or unstage (rm) files,
 and initiate a commit. Open it with `:Fossil` or `:Fossil status`.
 
+Fossil does not have a formal index/staging area like Git. However,
+`fossil.nvim` emulates this workflow to let you explicitly "add" untracked
+files and "rm" missing files before you commit. Using the `-` mapping on an
+untracked file will add it (making it `ADDED`), and using it on a missing
+file will formally delete it (making it `DELETED`).
+
 ==============================================================================
-4. Mappings                                                  *fossil-mappings*
+4. Branch Window                                               *fossil-branch*
+
+The Branch Window is an interactive UI to manage your Fossil branches. Open
+it with `:Fossil branch`. It displays a list of all branches.
+
+Mappings in the Branch Window:
+<CR>            Checkout the branch under the cursor.
+c               Create a new branch from the current checkout.
+d               Close the branch under the cursor (via `fossil amend --close`).
+m               Merge the branch under the cursor into the current checkout.
+q               Close the branch window.
+
+==============================================================================
+5. Ticket Window                                               *fossil-ticket*
+
+The Ticket Window is an interactive interface to view and manage your Fossil
+project's tickets (issues/bugs/features). Open it with `:Fossil ticket`.
+
+Mappings in the Ticket Window:
+<CR>            View the complete history of the ticket under the cursor.
+c               Create a new ticket (prompts for Title and Type).
+e               Edit a field on the ticket under the cursor.
+q               Close the ticket window.
+
+==============================================================================
+6. Wiki Window                                                 *fossil-wiki*
+
+The Wiki Window provides an interactive interface to view, edit, and create
+Fossil wiki pages. Open it with `:Fossil wiki` or `:FossilWiki`.
+
+Mappings in the Wiki Window:
+<CR>            Edit the wiki page under the cursor. This opens a new tab where
+                saving the buffer (`:w`) automatically commits it to the wiki.
+c               Create a new wiki page (or open an existing one by name).
+q               Close the wiki window.
+
+==============================================================================
+7. Timeline Window                                           *fossil-timeline*
+
+The Timeline Window is an interactive interface to view your Fossil project's
+commit history. Open it with `:Fossil timeline` or `:FossilTimeline`.
+
+Mappings in the Timeline Window:
+<CR>            View details about the commit under the cursor (`fossil info`).
+d               View the diff of the commit (`fossil diff -ci`).
+c               Checkout the commit under the cursor.
+q               Close the timeline window.
+
+==============================================================================
+8. File History Window                                         *fossil-finfo*
+
+The File History Window allows you to see the history of a specific file
+and compare versions. Open it with `:Fossil finfo` or `:FossilFinfo`.
+
+Mappings in the File History Window:
+<CR>            View the file exactly as it was at the selected commit.
+d               Open a two-way diff comparing the selected commit with your
+                current working copy.
+D               Open a two-way diff comparing the selected commit against its
+                immediate predecessor in the history list.
+m               Mark the commit under the cursor (for comparison).
+M               Open a two-way diff comparing the marked commit against the
+                commit currently under the cursor.
+q               Close the file history window.
+
+==============================================================================
+9. Mappings                                                  *fossil-mappings*
 
 When the status window is open, you can use the following default mappings
 (Fugitive-inspired):
@@ -240,7 +353,7 @@ These global maps can be disabled by setting `g:fossil_no_maps = 1` before the
 plugin loads.
 
 ==============================================================================
-5. Statusline                                            *fossil-statusline*
+9. Statusline                                            *fossil-statusline*
 
                                                         *FossilStatusline()*
 Add `%{FossilStatusline()}` to your statusline configuration to display the
@@ -253,7 +366,7 @@ Example statusline snippet:
 <
 
 ==============================================================================
-6. Configuration                                        *fossil-configuration*
+10. Configuration                                        *fossil-configuration*
 
 You can initialize the plugin with `require("fossil").setup(opts)` where
 `opts` is a table of configuration options.
@@ -265,7 +378,7 @@ Currently, configuration options are reserved for future use. Example setup:
 <
 
 ==============================================================================
-6. Lua API                                                        *fossil-api*
+11. Lua API                                                        *fossil-api*
 
 `fossil.nvim` exposes a few functions in its `require('fossil.api')` module
 for programmatic interactions with Fossil from Neovim lua scripts.

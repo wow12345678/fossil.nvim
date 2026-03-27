@@ -254,6 +254,36 @@ function M.sync(args)
 	end)
 end
 
+function M.undo(args)
+	api.exec_async({ "undo" }, nil, function(output, code)
+		if code == 0 then
+			vim.notify("Fossil undo complete:\n" .. table.concat(output, "\n"), vim.log.levels.INFO)
+		else
+			vim.notify("Fossil undo failed:\n" .. table.concat(output, "\n"), vim.log.levels.ERROR)
+		end
+		vim.cmd("checktime")
+		local has_status, status_mod = pcall(require, "fossil.ui.status")
+		if has_status and status_mod.refresh then
+			status_mod.refresh()
+		end
+	end)
+end
+
+function M.redo(args)
+	api.exec_async({ "redo" }, nil, function(output, code)
+		if code == 0 then
+			vim.notify("Fossil redo complete:\n" .. table.concat(output, "\n"), vim.log.levels.INFO)
+		else
+			vim.notify("Fossil redo failed:\n" .. table.concat(output, "\n"), vim.log.levels.ERROR)
+		end
+		vim.cmd("checktime")
+		local has_status, status_mod = pcall(require, "fossil.ui.status")
+		if has_status and status_mod.refresh then
+			status_mod.refresh()
+		end
+	end)
+end
+
 function M.wq(args, force)
 	local filename = args[2] or vim.api.nvim_buf_get_name(0)
 	if filename == "" then

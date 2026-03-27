@@ -6,15 +6,32 @@ local M = {}
 function M.open_commit_buffer(args)
 	vim.cmd("botright new")
 	local buf = vim.api.nvim_get_current_buf()
-	vim.api.nvim_buf_set_name(buf, "Fossil Commit")
+	vim.api.nvim_buf_set_name(buf, "Fossil Commit - " .. tostring(os.time()))
 
 	local template = {
 		"",
 		"---------------------------------------------------",
-		"Enter your commit message above. Lines starting with '-' are not ignored",
-		"unless you configure fossil differently, but this is your editor.",
+		"Enter your commit message above. Everything below this line will be ignored.",
 		"Save and quit (:wq) to commit, or quit without saving (:q!) to abort.",
+		"",
 	}
+
+	local changes, _ = api.exec({ "changes" })
+	if #changes > 0 then
+		table.insert(template, "Changes to be committed:")
+		for _, line in ipairs(changes) do
+			table.insert(template, "  " .. line)
+		end
+		table.insert(template, "")
+	end
+
+	local extras, _ = api.exec({ "extras" })
+	if #extras > 0 then
+		table.insert(template, "Untracked files:")
+		for _, line in ipairs(extras) do
+			table.insert(template, "  " .. line)
+		end
+	end
 
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, template)
 	vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
@@ -35,7 +52,7 @@ function M.open_commit_buffer(args)
 			end
 
 			-- Write message to a temp file
-			local tmp = os.tmpname()
+			local tmp = vim.fn.tempname()
 			local f = io.open(tmp, "w")
 			if f then
 				f:write(table.concat(msg, "\n"))

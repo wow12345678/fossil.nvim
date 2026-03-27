@@ -25,7 +25,10 @@ end, {
 			"rm",
 			"info",
 			"branch",
+			"ticket",
+			"wiki",
 			"timeline",
+			"finfo",
 			"blame",
 			"annotate",
 			"diffsplit",
@@ -42,6 +45,12 @@ end, {
 			"co",
 			"tag",
 			"show",
+			"undo",
+			"redo",
+			"push",
+			"pull",
+			"sync",
+			"fetch",
 		}
 		local matches = {}
 		for _, cmd in ipairs(cmds) do
@@ -60,10 +69,10 @@ vim.api.nvim_create_user_command("FossilStatus", function()
 end, {})
 vim.api.nvim_create_user_command("FossilCommit", function(opts)
 	fossil_command.execute({ "commit", unpack(opts.fargs) })
-end, { nargs = "*" })
+end, { nargs = "*", complete = "file" })
 vim.api.nvim_create_user_command("FossilBlame", function(opts)
 	fossil_command.execute({ "blame", unpack(opts.fargs) })
-end, { nargs = "*" })
+end, { nargs = "*", complete = "file" })
 vim.api.nvim_create_user_command("FossilDiffsplit", function(opts)
 	fossil_command.execute({ "diffsplit", unpack(opts.fargs) })
 end, { nargs = "*", complete = "file" })
@@ -136,6 +145,27 @@ vim.api.nvim_create_user_command("FossilCheckout", function(opts)
 	end
 	fossil_command.execute({ "checkout", unpack(args) })
 end, { bang = true, nargs = "*", complete = "file" })
+vim.api.nvim_create_user_command("FossilBranch", function(opts)
+	fossil_command.execute({ "branch", unpack(opts.fargs) })
+end, { nargs = "*" })
+vim.api.nvim_create_user_command("FossilTicket", function(opts)
+	fossil_command.execute({ "ticket", unpack(opts.fargs) })
+end, { nargs = "*" })
+vim.api.nvim_create_user_command("FossilWiki", function(opts)
+	fossil_command.execute({ "wiki", unpack(opts.fargs) })
+end, { nargs = "*" })
+vim.api.nvim_create_user_command("FossilTimeline", function(opts)
+	fossil_command.execute({ "timeline", unpack(opts.fargs) })
+end, { nargs = "*" })
+vim.api.nvim_create_user_command("FossilFinfo", function(opts)
+	fossil_command.execute({ "finfo", unpack(opts.fargs) })
+end, { nargs = "*", complete = "file" })
+vim.api.nvim_create_user_command("FossilUndo", function(opts)
+	fossil_command.execute({ "undo", unpack(opts.fargs) })
+end, { nargs = "*" })
+vim.api.nvim_create_user_command("FossilRedo", function(opts)
+	fossil_command.execute({ "redo", unpack(opts.fargs) })
+end, { nargs = "*" })
 vim.api.nvim_create_user_command("FossilCo", function(opts)
 	local args = vim.deepcopy(opts.fargs)
 	if opts.bang then

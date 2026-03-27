@@ -260,14 +260,20 @@ local function file_action(action_type)
 		if state == "UNTRACKED" then
 			api.exec({ "add", filename })
 			M.refresh()
-		elseif state == "ADDED" then
-			vim.notify("Already added.", vim.log.levels.INFO)
+		elseif state == "MISSING" then
+			api.exec({ "rm", filename })
+			M.refresh()
+		elseif state == "ADDED" or state == "DELETED" then
+			vim.notify("Already added/staged.", vim.log.levels.INFO)
 		else
 			vim.notify("Fossil has no staging for tracked files.", vim.log.levels.INFO)
 		end
 	elseif action_type == "unstage" then
 		if state == "ADDED" then
 			api.exec({ "rm", "--soft", filename })
+			M.refresh()
+		elseif state == "DELETED" then
+			api.exec({ "revert", filename })
 			M.refresh()
 		elseif state == "UNTRACKED" then
 			vim.notify("File is untracked.", vim.log.levels.INFO)
@@ -280,6 +286,12 @@ local function file_action(action_type)
 			M.refresh()
 		elseif state == "ADDED" then
 			api.exec({ "rm", "--soft", filename })
+			M.refresh()
+		elseif state == "MISSING" then
+			api.exec({ "rm", filename })
+			M.refresh()
+		elseif state == "DELETED" then
+			api.exec({ "revert", filename })
 			M.refresh()
 		else
 			vim.notify("Fossil has no staging for tracked files.", vim.log.levels.INFO)

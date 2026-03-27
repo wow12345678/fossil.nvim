@@ -90,9 +90,21 @@ local commands = {
 		window.open_quickfix_from_exec(args, nil, true)
 	end,
 	clog = function(args)
-		args[1] = "timeline"
-		window.open_clog(args, false)
+		if #args > 1 then
+			args[1] = "timeline"
+			window.open_clog(args, false)
+		else
+			require("fossil.ui.timeline").open_timeline_window()
+		end
 	end,
+	timeline = function(args)
+		if #args > 1 then
+			window.open_clog(args, false)
+		else
+			require("fossil.ui.timeline").open_timeline_window()
+		end
+	end,
+	finfo = require("fossil.ui.finfo").open_finfo_window,
 	gllog = function(args)
 		args[1] = "timeline"
 		window.open_clog(args, true)
@@ -146,9 +158,32 @@ local commands = {
 	end,
 	checkout = ops.checkout,
 	co = ops.checkout,
+	branch = function(args)
+		if #args > 1 then
+			ops.show(args)
+		else
+			require("fossil.ui.branch").open_branch_window()
+		end
+	end,
+	ticket = function(args)
+		if #args > 1 then
+			ops.show(args)
+		else
+			require("fossil.ui.ticket").open_ticket_window()
+		end
+	end,
+	wiki = function(args)
+		if #args > 1 then
+			ops.show(args)
+		else
+			require("fossil.ui.wiki").open_wiki_window()
+		end
+	end,
 	tag = ops.tag,
 	show = ops.show,
 	info = ops.show,
+	undo = ops.undo,
+	redo = ops.redo,
 	push = ops.sync,
 	pull = ops.sync,
 	sync = ops.sync,
