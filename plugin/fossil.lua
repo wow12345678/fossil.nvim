@@ -273,7 +273,7 @@ if vim.g.fossil_no_maps ~= 1 then
 		local path = require("fossil.util").get_relative_path()
 		if path ~= "" then
 			vim.fn.setreg('"', path)
-			vim.fn.setreg('0', path)
+			vim.fn.setreg("0", path)
 			vim.notify("Yanked: " .. path, vim.log.levels.INFO)
 		end
 	end, { desc = "Yank fossil relative path" })
@@ -290,11 +290,13 @@ local statusline_cache = {}
 --- @return string
 function _G.FossilStatusline()
 	local root = require("fossil.util").get_repo_root()
-	if not root then return "" end
+	if not root then
+		return ""
+	end
 
 	local now = vim.uv.now()
 	local cache = statusline_cache[root]
-	
+
 	if cache and (now - cache.time < 5000) then
 		return cache.text
 	end

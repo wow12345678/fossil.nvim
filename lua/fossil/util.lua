@@ -46,7 +46,7 @@ function M.get_relative_path(buf)
 	if not path or path == "" then
 		return ""
 	end
-	
+
 	-- Check if it's a fossil:// URL
 	local fossil_uri = path:match("^fossil://(.+)$")
 	if fossil_uri then
