@@ -153,7 +153,20 @@ function M.open_ticket_window()
         end
         vim.ui.input({ prompt = "Field to edit (e.g. status, title, type): " }, function(field)
             if field and field ~= "" then
-                vim.ui.input({ prompt = "New value for " .. field .. ": " }, function(val)
+                local old_value = ""
+                local out_show, c_show = api.exec({ "ticket", "show", uuid })
+                if c_show == 0 and #out_show >= 2 then
+                    local headers = parse_tsv(out_show[1])
+                    local values = parse_tsv(out_show[2])
+                    for i, h in ipairs(headers) do
+                        if h == field then
+                            old_value = values[i] or ""
+                            break
+                        end
+                    end
+                end
+
+                vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, function(val)
                     if val and val ~= "" then
                         local out, c = api.exec({ "ticket", "set", uuid, field, val })
                         if c == 0 then

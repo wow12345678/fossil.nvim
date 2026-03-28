@@ -32,53 +32,65 @@ function M.open_settings_window()
             return
         end
 
-        vim.ui.input(
-            { prompt = "New value for " .. setting_name .. " (empty to unset, prefix with '!' for global): " },
-            function(input)
-                if not input then
-                    return
-                end
-
-                local is_global = false
-                local value = input
-
-                if string.sub(input, 1, 1) == "!" then
-                    is_global = true
-                    value = string.sub(input, 2)
-                    -- strip optional leading space after !
-                    if string.sub(value, 1, 1) == " " then
-                        value = string.sub(value, 2)
-                    end
-                end
-
-                local args = {}
-                if value == "" then
-                    args = { "unset", setting_name }
-                    if is_global then
-                        table.insert(args, "--global")
-                    end
-                else
-                    args = { "settings", setting_name, value }
-                    if is_global then
-                        table.insert(args, "--global")
-                    end
-                end
-
-                local out, c = api.exec(args)
-                if c ~= 0 then
-                    vim.notify(
-                        "Failed to update " .. setting_name .. ":\n" .. table.concat(out, "\n"),
-                        vim.log.levels.ERROR
-                    )
-                else
-                    vim.notify("Setting " .. setting_name .. " updated.", vim.log.levels.INFO)
-                    vim.defer_fn(function()
-                        vim.notify("Settings UI mappings: <CR>(edit), R(refresh), q(quit)", vim.log.levels.INFO)
-                    end, 3000)
-                end
-                refresh()
+        local rest = string.sub(line, #setting_name + 1)
+        local old_value = ""
+        local match_val = string.match(rest, "^%s*%(%a+%)%s*(.*)$")
+        if match_val then
+            old_value = match_val
+        else
+            match_val = string.match(rest, "^%s+(.*)$")
+            if match_val then
+                old_value = match_val
             end
-        )
+        end
+
+        vim.ui.input({
+            prompt = "New value for " .. setting_name .. " (empty to unset, prefix with '!' for global): ",
+            default = old_value,
+        }, function(input)
+            if not input then
+                return
+            end
+
+            local is_global = false
+            local value = input
+
+            if string.sub(input, 1, 1) == "!" then
+                is_global = true
+                value = string.sub(input, 2)
+                -- strip optional leading space after !
+                if string.sub(value, 1, 1) == " " then
+                    value = string.sub(value, 2)
+                end
+            end
+
+            local args = {}
+            if value == "" then
+                args = { "unset", setting_name }
+                if is_global then
+                    table.insert(args, "--global")
+                end
+            else
+                args = { "settings", setting_name, value }
+                if is_global then
+                    table.insert(args, "--global")
+                end
+            end
+
+            local out, c = api.exec(args)
+            if c ~= 0 then
+                vim.notify(
+                    "Failed to update " .. setting_name .. ":\n" .. table.concat(out, "\n"),
+                    vim.log.levels.ERROR
+                )
+            else
+                vim.notify("Setting " .. setting_name .. " updated.", vim.log.levels.INFO)
+                vim.defer_fn(function()
+                    vim.notify("Settings UI mappings: <CR>(edit), R(refresh), q(quit)", vim.log.levels.INFO)
+                end, 3000)
+            end
+            refresh()
+        end)
     end
 
     vim.keymap.set("n", "<CR>", edit_setting, { buffer = buf, desc = "Edit setting under cursor" })
