@@ -3,12 +3,26 @@ local window = require("fossil.ui.window")
 
 local M = {}
 
--- Cache for dropdown field values extracted from fossil config
-local cached_dropdown_fields = nil
+-- Cache for dropdown field values extracted from fossil config, keyed by repo path
+local cached_dropdown_fields = {}
 
 --- Parse tab separated ticket line
 local function parse_tsv(line)
     return vim.split(line, "\t", { plain = true })
+end
+
+--- Get the root directory of the current fossil checkout
+local function get_fossil_root()
+    local out, code = api.exec({ "info" })
+    if code == 0 then
+        for _, line in ipairs(out) do
+            local root = line:match("^local%-root:%s+(.+)$")
+            if root then
+                return root:gsub("/$", "")
+            end
+        end
+    end
+    return vim.fn.getcwd()
 end
 
 --- Get a random available port
@@ -22,10 +36,20 @@ end
 
 --- Fetch ticket dropdown choices from Fossil's tktsetup_com page
 local function fetch_ticket_choices(callback)
-    if cached_dropdown_fields then
-        callback(cached_dropdown_fields)
+    local repo_root = get_fossil_root()
+    if cached_dropdown_fields[repo_root] then
+        callback(cached_dropdown_fields[repo_root])
         return
     end
+
+    local fallback_fields = {
+        status = { "Open", "Verified", "Review", "Deferred", "Fixed", "Tested", "Closed" },
+        type = { "Code_Defect", "Build_Problem", "Documentation", "Feature_Request", "Incident" },
+        severity = { "Critical", "Severe", "Important", "Minor", "Cosmetic" },
+        priority = { "Immediate", "High", "Medium", "Low", "Zero" },
+        resolution = { "Open", "Fixed", "Rejected", "Workaround", "Unable_To_Reproduce", "Works_As_Designed" },
+        subsystem = {},
+    }
 
     local port = get_free_port()
     -- Start fossil ui server in the background
@@ -35,13 +59,32 @@ local function fetch_ticket_choices(callback)
 
     -- Give the server a moment to start
     vim.defer_fn(function()
+        local stdout_data = {}
         local curl_job = vim.fn.jobstart({ "curl", "-s", "http://localhost:" .. port .. "/tktsetup_com" }, {
             stdout_buffered = true,
             on_stdout = function(_, data)
-                local content = table.concat(data, "\n")
-
-                -- Stop the server
+                for _, line in ipairs(data) do
+                    table.insert(stdout_data, line)
+                end
+            end,
+            on_stderr = function() end,
+            on_exit = function(_, code)
                 vim.fn.jobstop(ui_job)
+
+                if code ~= 0 then
+                    -- Fallback if curl fails
+                    callback(fallback_fields)
+                    return
+                end
+
+                local content = table.concat(stdout_data, "\n")
+
+                -- Only parse within the active textarea to avoid picking up the default script examples
+                local textarea_content = content:match('<textarea[^>]*name="x"[^>]*>(.-)</textarea>')
+                if not textarea_content then
+                    callback(fallback_fields)
+                    return
+                end
 
                 local dropdown_fields = {
                     status = {},
@@ -53,7 +96,7 @@ local function fetch_ticket_choices(callback)
                 }
 
                 -- Parse the TH1 script variables: set variable_name { values... }
-                for var_name, values_block in content:gmatch("set ([%w_]+) %{([^}]*)%}") do
+                for var_name, values_block in textarea_content:gmatch("set ([%w_]+) %{([^}]*)%}") do
                     local field_match = var_name:match("^(%w+)_choices$")
                     if field_match and dropdown_fields[field_match] then
                         for value in values_block:gmatch("%S+") do
@@ -62,32 +105,15 @@ local function fetch_ticket_choices(callback)
                     end
                 end
 
-                cached_dropdown_fields = dropdown_fields
+                cached_dropdown_fields[repo_root] = dropdown_fields
                 callback(dropdown_fields)
             end,
-            on_stderr = function() end,
-            on_exit = function(_, code)
-                if code ~= 0 then
-                    vim.fn.jobstop(ui_job)
-                    -- Fallback if curl fails
-                    callback({
-                        status = { "Open", "Verified", "Review", "Deferred", "Fixed", "Tested", "Closed" },
-                        type = { "Code_Defect", "Build_Problem", "Documentation", "Feature_Request", "Incident" },
-                        severity = { "Critical", "Severe", "Important", "Minor", "Cosmetic" },
-                        priority = { "Immediate", "High", "Medium", "Low", "Zero" },
-                        resolution = {
-                            "Open",
-                            "Fixed",
-                            "Rejected",
-                            "Workaround",
-                            "Unable_To_Reproduce",
-                            "Works_As_Designed",
-                        },
-                        subsystem = {},
-                    })
-                end
-            end,
         })
+
+        if curl_job <= 0 then
+            vim.fn.jobstop(ui_job)
+            callback(fallback_fields)
+        end
     end, 500)
 end
 
@@ -408,13 +434,10 @@ function M.open_ticket_window()
                                         function(selected)
                                             vim.schedule(function()
                                                 if selected == "[Type custom value...]" then
-                                                    vim.ui.input(
-                                                        {
-                                                            prompt = "New value for " .. field .. ": ",
-                                                            default = old_value,
-                                                        },
-                                                        update_ticket
-                                                    )
+                                                    vim.ui.input({
+                                                        prompt = "New value for " .. field .. ": ",
+                                                        default = old_value,
+                                                    }, update_ticket)
                                                 elseif selected then
                                                     update_ticket(selected)
                                                 end
