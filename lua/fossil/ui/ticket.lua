@@ -87,7 +87,7 @@ function M.open_ticket_window()
                 "Contact",
                 "Version Found",
                 "Title",
-                "Description"
+                "Comment"
             )
             table.insert(lines, header_str)
             table.insert(lines, string.rep("-", 170))
@@ -185,11 +185,25 @@ function M.open_ticket_window()
 
     -- Create Ticket
     vim.keymap.set("n", "c", function()
-        vim.ui.input({ prompt = "New Ticket Title: " }, function(title)
-            if title and title ~= "" then
-                vim.ui.input({ prompt = "Ticket Type (e.g. Bug, Feature): " }, function(ttype)
-                    local type_val = (ttype and ttype ~= "") and ttype or "Feature"
-                    local out, c = api.exec({ "ticket", "add", "title", title, "type", type_val, "status", "Open" })
+        local out_show, c_show = api.exec({ "ticket", "show", "0" })
+        if c_show ~= 0 or #out_show == 0 then
+            vim.notify("Failed to get ticket format.", vim.log.levels.ERROR)
+            return
+        end
+        local all_headers = parse_tsv(out_show[1])
+        local fields = { "title" }
+        for _, h in ipairs(all_headers) do
+            if h ~= "tkt_id" and h ~= "tkt_uuid" and h ~= "tkt_mtime" and h ~= "tkt_ctime" and h ~= "title" then
+                table.insert(fields, h)
+            end
+        end
+
+        local args = { "ticket", "add" }
+
+        local function prompt_field(idx)
+            if idx > #fields then
+                if #args > 2 then
+                    local out, c = api.exec(args)
                     if c == 0 then
                         vim.notify("Created ticket.", vim.log.levels.INFO)
                         vim.cmd("q")
@@ -197,9 +211,38 @@ function M.open_ticket_window()
                     else
                         vim.notify("Failed to create ticket:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
                     end
-                end)
+                else
+                    vim.notify("No fields provided, ticket creation cancelled.", vim.log.levels.WARN)
+                end
+                return
             end
-        end)
+
+            local field = fields[idx]
+            local prompt_text = "Value for " .. field .. " (leave empty to skip): "
+            if field == "title" then
+                prompt_text = "Title (required): "
+            end
+
+            vim.ui.input({ prompt = prompt_text }, function(val)
+                -- If the user pressed Esc, val is nil. We should probably abort or skip?
+                -- If they pressed enter without typing, val is "".
+                if val == nil then
+                    vim.notify("Ticket creation cancelled.", vim.log.levels.INFO)
+                    return
+                end
+
+                if val ~= "" then
+                    table.insert(args, field)
+                    table.insert(args, val)
+                elseif field == "title" then
+                    vim.notify("Title is required. Ticket creation cancelled.", vim.log.levels.WARN)
+                    return
+                end
+                prompt_field(idx + 1)
+            end)
+        end
+
+        prompt_field(1)
     end, opts)
 
     -- Edit Ticket
@@ -208,35 +251,42 @@ function M.open_ticket_window()
         if not uuid then
             return
         end
-        vim.ui.input({ prompt = "Field to edit (e.g. status, type, priority, severity, comment): " }, function(field)
-            if field and field ~= "" then
-                local old_value = ""
-                local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid]='" .. uuid .. "'" })
-                if c_show == 0 and #out_show >= 2 then
-                    local headers = parse_tsv(out_show[1])
-                    local values = parse_tsv(out_show[2])
+
+        local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid]='" .. uuid .. "'" })
+        if c_show == 0 and #out_show >= 2 then
+            local headers = parse_tsv(out_show[1])
+            local values = parse_tsv(out_show[2])
+
+            vim.ui.select(headers, { prompt = "Field to edit: " }, function(field)
+                if field and field ~= "" then
+                    local old_value = ""
                     for i, h in ipairs(headers) do
                         if h == field then
                             old_value = values[i] or ""
                             break
                         end
                     end
-                end
 
-                vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, function(val)
-                    if val and val ~= "" then
-                        local out, c = api.exec({ "ticket", "set", uuid, field, val })
-                        if c == 0 then
-                            vim.notify("Updated ticket.", vim.log.levels.INFO)
-                            vim.cmd("q")
-                            M.open_ticket_window()
-                        else
-                            vim.notify("Failed to update ticket:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+                    vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, function(val)
+                        if val and val ~= "" then
+                            local out, c = api.exec({ "ticket", "set", uuid, field, val })
+                            if c == 0 then
+                                vim.notify("Updated ticket.", vim.log.levels.INFO)
+                                vim.cmd("q")
+                                M.open_ticket_window()
+                            else
+                                vim.notify(
+                                    "Failed to update ticket:\n" .. table.concat(out, "\n"),
+                                    vim.log.levels.ERROR
+                                )
+                            end
                         end
-                    end
-                end)
-            end
-        end)
+                    end)
+                end
+            end)
+        else
+            vim.notify("Failed to load ticket fields.", vim.log.levels.ERROR)
+        end
     end, opts)
 
     -- Quit
