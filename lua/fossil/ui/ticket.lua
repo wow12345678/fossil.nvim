@@ -267,7 +267,16 @@ function M.open_ticket_window()
                         end
                     end
 
-                    vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, function(val)
+                    local dropdown_fields = {
+                        status = true,
+                        type = true,
+                        severity = true,
+                        priority = true,
+                        resolution = true,
+                        subsystem = true,
+                    }
+
+                    local function update_ticket(val)
                         if val and val ~= "" then
                             local out, c = api.exec({ "ticket", "set", uuid, field, val })
                             if c == 0 then
@@ -281,7 +290,37 @@ function M.open_ticket_window()
                                 )
                             end
                         end
-                    end)
+                    end
+
+                    if dropdown_fields[field] then
+                        local query = string.format(
+                            "SELECT DISTINCT %s FROM ticket WHERE %s IS NOT NULL AND %s != '';",
+                            field,
+                            field,
+                            field
+                        )
+                        local opts_out, opts_c = api.exec({ "sql", query })
+                        local options = {}
+                        if opts_c == 0 then
+                            for _, opt in ipairs(opts_out) do
+                                table.insert(options, opt)
+                            end
+                        end
+                        table.insert(options, "[Type custom value...]")
+
+                        vim.ui.select(options, { prompt = "Select new value for " .. field .. ": " }, function(selected)
+                            if selected == "[Type custom value...]" then
+                                vim.ui.input(
+                                    { prompt = "New value for " .. field .. ": ", default = old_value },
+                                    update_ticket
+                                )
+                            elseif selected then
+                                update_ticket(selected)
+                            end
+                        end)
+                    else
+                        vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, update_ticket)
+                    end
                 end
             end)
         else
