@@ -238,7 +238,9 @@ function M.open_ticket_window()
                     vim.notify("Title is required. Ticket creation cancelled.", vim.log.levels.WARN)
                     return
                 end
-                prompt_field(idx + 1)
+                vim.schedule(function()
+                    prompt_field(idx + 1)
+                end)
             end)
         end
 
@@ -259,68 +261,101 @@ function M.open_ticket_window()
 
             vim.ui.select(headers, { prompt = "Field to edit: " }, function(field)
                 if field and field ~= "" then
-                    local old_value = ""
-                    for i, h in ipairs(headers) do
-                        if h == field then
-                            old_value = values[i] or ""
-                            break
-                        end
-                    end
-
-                    local dropdown_fields = {
-                        status = true,
-                        type = true,
-                        severity = true,
-                        priority = true,
-                        resolution = true,
-                        subsystem = true,
-                    }
-
-                    local function update_ticket(val)
-                        if val and val ~= "" then
-                            local out, c = api.exec({ "ticket", "set", uuid, field, val })
-                            if c == 0 then
-                                vim.notify("Updated ticket.", vim.log.levels.INFO)
-                                vim.cmd("q")
-                                M.open_ticket_window()
-                            else
-                                vim.notify(
-                                    "Failed to update ticket:\n" .. table.concat(out, "\n"),
-                                    vim.log.levels.ERROR
-                                )
+                    vim.schedule(function()
+                        local old_value = ""
+                        for i, h in ipairs(headers) do
+                            if h == field then
+                                old_value = values[i] or ""
+                                break
                             end
                         end
-                    end
 
-                    if dropdown_fields[field] then
-                        local query = string.format(
-                            "SELECT DISTINCT %s FROM ticket WHERE %s IS NOT NULL AND %s != '';",
-                            field,
-                            field,
-                            field
-                        )
-                        local opts_out, opts_c = api.exec({ "sql", query })
-                        local options = {}
-                        if opts_c == 0 then
-                            for _, opt in ipairs(opts_out) do
-                                table.insert(options, opt)
+                        local dropdown_fields = {
+                            status = { "Open", "Verified", "Review", "Deferred", "Fixed", "Tested", "Closed" },
+                            type = { "Code_Defect", "Build_Problem", "Documentation", "Feature_Request", "Incident" },
+                            severity = { "Critical", "Severe", "Important", "Minor", "Cosmetic" },
+                            priority = { "Immediate", "High", "Medium", "Low", "Zero" },
+                            resolution = {
+                                "Open",
+                                "Fixed",
+                                "Rejected",
+                                "Workaround",
+                                "Unable_To_Reproduce",
+                                "Works_As_Designed",
+                            },
+                            subsystem = {},
+                        }
+
+                        local function update_ticket(val)
+                            if val and val ~= "" then
+                                local out, c = api.exec({ "ticket", "set", uuid, field, val })
+                                if c == 0 then
+                                    vim.notify("Updated ticket.", vim.log.levels.INFO)
+                                    vim.cmd("q")
+                                    M.open_ticket_window()
+                                else
+                                    vim.notify(
+                                        "Failed to update ticket:\n" .. table.concat(out, "\n"),
+                                        vim.log.levels.ERROR
+                                    )
+                                end
                             end
                         end
-                        table.insert(options, "[Type custom value...]")
 
-                        vim.ui.select(options, { prompt = "Select new value for " .. field .. ": " }, function(selected)
-                            if selected == "[Type custom value...]" then
-                                vim.ui.input(
-                                    { prompt = "New value for " .. field .. ": ", default = old_value },
-                                    update_ticket
-                                )
-                            elseif selected then
-                                update_ticket(selected)
+                        if dropdown_fields[field] then
+                            local query = string.format(
+                                "SELECT DISTINCT %s FROM ticket WHERE %s IS NOT NULL AND %s != '';",
+                                field,
+                                field,
+                                field
+                            )
+                            local opts_out, opts_c = api.exec({ "sql", query })
+
+                            local options_set = {}
+                            local options = {}
+
+                            -- Add default choices
+                            for _, opt in ipairs(dropdown_fields[field]) do
+                                if not options_set[opt] then
+                                    table.insert(options, opt)
+                                    options_set[opt] = true
+                                end
                             end
-                        end)
-                    else
-                        vim.ui.input({ prompt = "New value for " .. field .. ": ", default = old_value }, update_ticket)
-                    end
+
+                            -- Add existing choices from repo
+                            if opts_c == 0 then
+                                for _, opt in ipairs(opts_out) do
+                                    if not options_set[opt] then
+                                        table.insert(options, opt)
+                                        options_set[opt] = true
+                                    end
+                                end
+                            end
+                            table.insert(options, "[Type custom value...]")
+
+                            vim.ui.select(
+                                options,
+                                { prompt = "Select new value for " .. field .. ": " },
+                                function(selected)
+                                    vim.schedule(function()
+                                        if selected == "[Type custom value...]" then
+                                            vim.ui.input(
+                                                { prompt = "New value for " .. field .. ": ", default = old_value },
+                                                update_ticket
+                                            )
+                                        elseif selected then
+                                            update_ticket(selected)
+                                        end
+                                    end)
+                                end
+                            )
+                        else
+                            vim.ui.input(
+                                { prompt = "New value for " .. field .. ": ", default = old_value },
+                                update_ticket
+                            )
+                        end
+                    end)
                 end
             end)
         else
