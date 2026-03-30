@@ -119,9 +119,6 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
 :FPedit [file]                                             *:FPedit*
         Opens the file in a preview window (similar to `:Gpedit`).
 
-:FDrop [file]                                               *:FDrop*
-        Opens the file using `:drop` (similar to `:Gdrop`).
-
 :FBrowse [file]                                           *:FBrowse*
         Opens the file or repo in the browser using the remote URL.
 
@@ -156,9 +153,6 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
 
 :FTag [args]                                                 *:FTag*
         Runs `fossil tag`.
-
-:FShow [args]                                               *:FShow*
-        Runs `fossil show`.
 
 :FInfo [args]                                               *:FInfo*
         Runs `fossil info`.
