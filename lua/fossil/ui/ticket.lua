@@ -36,8 +36,8 @@ function M.open_ticket_window()
     -- tkt_id \t tkt_uuid \t ...
     if #output > 0 then
         local headers = parse_tsv(output[1])
-        -- We want to find index of: tkt_uuid, type, status, title
         local idx_uuid, idx_type, idx_status, idx_title
+        local idx_severity, idx_priority, idx_resolution, idx_subsystem, idx_contact, idx_foundin, idx_comment
         for i, h in ipairs(headers) do
             if h == "tkt_uuid" then
                 idx_uuid = i
@@ -51,12 +51,46 @@ function M.open_ticket_window()
             if h == "title" then
                 idx_title = i
             end
+            if h == "severity" then
+                idx_severity = i
+            end
+            if h == "priority" then
+                idx_priority = i
+            end
+            if h == "resolution" then
+                idx_resolution = i
+            end
+            if h == "subsystem" then
+                idx_subsystem = i
+            end
+            if h == "private_contact" then
+                idx_contact = i
+            end
+            if h == "foundin" then
+                idx_foundin = i
+            end
+            if h == "comment" then
+                idx_comment = i
+            end
         end
 
         if idx_uuid and idx_title then
-            local header_str = string.format(" %-12s | %-10s | %-10s | %s", "UUID", "Type", "Status", "Title")
+            local header_str = string.format(
+                " %-10s | %-10s | %-10s | %-10s | %-10s | %-15s | %-15s | %-15s | %-15s | %-30s | %s",
+                "UUID",
+                "Type",
+                "Status",
+                "Severity",
+                "Priority",
+                "Resolution",
+                "Subsystem",
+                "Contact",
+                "Version Found",
+                "Title",
+                "Description"
+            )
             table.insert(lines, header_str)
-            table.insert(lines, string.rep("-", 60))
+            table.insert(lines, string.rep("-", 170))
 
             for i = 2, #output do
                 local row = parse_tsv(output[i])
@@ -64,9 +98,32 @@ function M.open_ticket_window()
                     local uuid = string.sub(row[idx_uuid] or "", 1, 10)
                     local ttype = string.sub(row[idx_type] or "", 1, 10)
                     local status = string.sub(row[idx_status] or "", 1, 10)
-                    local title = row[idx_title] or ""
+                    local severity = string.sub(row[idx_severity] or "", 1, 10)
+                    local priority = string.sub(row[idx_priority] or "", 1, 10)
+                    local resolution = string.sub(row[idx_resolution] or "", 1, 15)
+                    local subsystem = string.sub(row[idx_subsystem] or "", 1, 15)
+                    local contact = string.sub(row[idx_contact] or "", 1, 15)
+                    local foundin = string.sub(row[idx_foundin] or "", 1, 15)
+                    local title = string.sub(row[idx_title] or "", 1, 30)
+                    local comment = row[idx_comment] or ""
 
-                    local line_str = string.format(" %-12s | %-10s | %-10s | %s", uuid, ttype, status, title)
+                    -- remove newlines from comment so it displays on one line
+                    comment = comment:gsub("\r", ""):gsub("\n", " ")
+
+                    local line_str = string.format(
+                        " %-10s | %-10s | %-10s | %-10s | %-10s | %-15s | %-15s | %-15s | %-15s | %-30s | %s",
+                        uuid,
+                        ttype,
+                        status,
+                        severity,
+                        priority,
+                        resolution,
+                        subsystem,
+                        contact,
+                        foundin,
+                        title,
+                        comment
+                    )
                     table.insert(lines, line_str)
                 end
             end
@@ -151,10 +208,10 @@ function M.open_ticket_window()
         if not uuid then
             return
         end
-        vim.ui.input({ prompt = "Field to edit (e.g. status, title, type): " }, function(field)
+        vim.ui.input({ prompt = "Field to edit (e.g. status, type, priority, severity, comment): " }, function(field)
             if field and field ~= "" then
                 local old_value = ""
-                local out_show, c_show = api.exec({ "ticket", "show", uuid })
+                local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid]='" .. uuid .. "'" })
                 if c_show == 0 and #out_show >= 2 then
                     local headers = parse_tsv(out_show[1])
                     local values = parse_tsv(out_show[2])
