@@ -164,61 +164,128 @@ function M.open_ticket_window()
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_name(buf, "Fossil Tickets - " .. tostring(os.time()))
 
-    local lines = {
-        "==================================================================",
-        "|                    Fossil Tickets                              |",
-        "==================================================================",
-        " <CR>  View Ticket History under cursor",
-        " c     Create a new Ticket",
-        " e     Edit Ticket under cursor",
-        " q     Close this window",
-        "==================================================================",
-        "",
+    local filter_state = {
+        status = nil,
+        type = nil,
+        severity = nil,
+        priority = nil,
+        resolution = nil,
+        search = nil,
     }
 
-    -- Output typically has a header line:
-    -- tkt_id \t tkt_uuid \t ...
+    local all_tickets = {}
+    local headers = {}
+    local col_indices = {}
+
     if #output > 0 then
-        local headers = parse_tsv(output[1])
-        local idx_uuid, idx_type, idx_status, idx_title
-        local idx_severity, idx_priority, idx_resolution, idx_subsystem, idx_contact, idx_foundin, idx_comment
+        headers = parse_tsv(output[1])
         for i, h in ipairs(headers) do
-            if h == "tkt_uuid" then
-                idx_uuid = i
+            col_indices[h] = i
+        end
+
+        for i = 2, #output do
+            local row = parse_tsv(output[i])
+            if #row >= (col_indices["tkt_uuid"] or 1) then
+                local ticket = {
+                    uuid = string.sub(row[col_indices["tkt_uuid"]] or "", 1, 10),
+                    type = string.sub(row[col_indices["type"]] or "", 1, 10),
+                    status = string.sub(row[col_indices["status"]] or "", 1, 10),
+                    severity = string.sub(row[col_indices["severity"]] or "", 1, 10),
+                    priority = string.sub(row[col_indices["priority"]] or "", 1, 10),
+                    resolution = string.sub(row[col_indices["resolution"]] or "", 1, 15),
+                    subsystem = string.sub(row[col_indices["subsystem"]] or "", 1, 15),
+                    contact = string.sub(row[col_indices["private_contact"]] or "", 1, 15),
+                    foundin = string.sub(row[col_indices["foundin"]] or "", 1, 15),
+                    title = string.sub(row[col_indices["title"]] or "", 1, 30),
+                    comment = (row[col_indices["comment"]] or ""):gsub("\r", ""):gsub("\n", " "),
+                }
+                table.insert(all_tickets, ticket)
             end
-            if h == "type" then
-                idx_type = i
+        end
+    end
+
+    local function render()
+        local lines = {
+            "==================================================================",
+            "|                    Fossil Tickets                              |",
+            "==================================================================",
+            " <CR> View   c Create   e Edit   q Quit",
+            " fs Status  ft Type  fv Severity  fp Priority  fr Resolution",
+            " /  Search  x  Clear filters",
+            "==================================================================",
+        }
+
+        local active_filters = {}
+        if filter_state.status then
+            table.insert(active_filters, "Status=" .. filter_state.status)
+        end
+        if filter_state.type then
+            table.insert(active_filters, "Type=" .. filter_state.type)
+        end
+        if filter_state.severity then
+            table.insert(active_filters, "Severity=" .. filter_state.severity)
+        end
+        if filter_state.priority then
+            table.insert(active_filters, "Priority=" .. filter_state.priority)
+        end
+        if filter_state.resolution then
+            table.insert(active_filters, "Resolution=" .. filter_state.resolution)
+        end
+        if filter_state.search then
+            table.insert(active_filters, 'Search="' .. filter_state.search .. '"')
+        end
+
+        local filter_str = table.concat(active_filters, ", ")
+        if filter_str == "" then
+            filter_str = "None"
+        end
+
+        local filtered_tickets = {}
+        for _, t in ipairs(all_tickets) do
+            local match = true
+            if filter_state.status and t.status ~= string.sub(filter_state.status, 1, 10) then
+                match = false
             end
-            if h == "status" then
-                idx_status = i
+            if filter_state.type and t.type ~= string.sub(filter_state.type, 1, 10) then
+                match = false
             end
-            if h == "title" then
-                idx_title = i
+            if filter_state.severity and t.severity ~= string.sub(filter_state.severity, 1, 10) then
+                match = false
             end
-            if h == "severity" then
-                idx_severity = i
+            if filter_state.priority and t.priority ~= string.sub(filter_state.priority, 1, 10) then
+                match = false
             end
-            if h == "priority" then
-                idx_priority = i
+            if filter_state.resolution and t.resolution ~= string.sub(filter_state.resolution, 1, 15) then
+                match = false
             end
-            if h == "resolution" then
-                idx_resolution = i
+
+            if match and filter_state.search then
+                local search_lower = filter_state.search:lower()
+                local t_lower = t.title:lower()
+                local c_lower = t.comment:lower()
+                local cont_lower = t.contact:lower()
+                if
+                    not (
+                        t_lower:find(search_lower, 1, true)
+                        or c_lower:find(search_lower, 1, true)
+                        or cont_lower:find(search_lower, 1, true)
+                    )
+                then
+                    match = false
+                end
             end
-            if h == "subsystem" then
-                idx_subsystem = i
-            end
-            if h == "private_contact" then
-                idx_contact = i
-            end
-            if h == "foundin" then
-                idx_foundin = i
-            end
-            if h == "comment" then
-                idx_comment = i
+
+            if match then
+                table.insert(filtered_tickets, t)
             end
         end
 
-        if idx_uuid and idx_title then
+        local count_str = string.format("[%d of %d]", #filtered_tickets, #all_tickets)
+        table.insert(lines, string.format(" Filters: %-46s %s", string.sub(filter_str, 1, 46), count_str))
+        table.insert(lines, "==================================================================")
+        table.insert(lines, "")
+
+        if col_indices["tkt_uuid"] and col_indices["title"] then
             local header_str = string.format(
                 " %-10s | %-10s | %-10s | %-10s | %-10s | %-15s | %-15s | %-15s | %-15s | %-30s | %s",
                 "UUID",
@@ -236,49 +303,39 @@ function M.open_ticket_window()
             table.insert(lines, header_str)
             table.insert(lines, string.rep("-", 170))
 
-            for i = 2, #output do
-                local row = parse_tsv(output[i])
-                if #row >= idx_uuid then
-                    local uuid = string.sub(row[idx_uuid] or "", 1, 10)
-                    local ttype = string.sub(row[idx_type] or "", 1, 10)
-                    local status = string.sub(row[idx_status] or "", 1, 10)
-                    local severity = string.sub(row[idx_severity] or "", 1, 10)
-                    local priority = string.sub(row[idx_priority] or "", 1, 10)
-                    local resolution = string.sub(row[idx_resolution] or "", 1, 15)
-                    local subsystem = string.sub(row[idx_subsystem] or "", 1, 15)
-                    local contact = string.sub(row[idx_contact] or "", 1, 15)
-                    local foundin = string.sub(row[idx_foundin] or "", 1, 15)
-                    local title = string.sub(row[idx_title] or "", 1, 30)
-                    local comment = row[idx_comment] or ""
-
-                    -- remove newlines from comment so it displays on one line
-                    comment = comment:gsub("\r", ""):gsub("\n", " ")
-
-                    local line_str = string.format(
-                        " %-10s | %-10s | %-10s | %-10s | %-10s | %-15s | %-15s | %-15s | %-15s | %-30s | %s",
-                        uuid,
-                        ttype,
-                        status,
-                        severity,
-                        priority,
-                        resolution,
-                        subsystem,
-                        contact,
-                        foundin,
-                        title,
-                        comment
-                    )
-                    table.insert(lines, line_str)
-                end
+            for _, t in ipairs(filtered_tickets) do
+                local line_str = string.format(
+                    " %-10s | %-10s | %-10s | %-10s | %-10s | %-15s | %-15s | %-15s | %-15s | %-30s | %s",
+                    t.uuid,
+                    t.type,
+                    t.status,
+                    t.severity,
+                    t.priority,
+                    t.resolution,
+                    t.subsystem,
+                    t.contact,
+                    t.foundin,
+                    t.title,
+                    t.comment
+                )
+                table.insert(lines, line_str)
             end
         else
-            for _, line in ipairs(output) do
-                table.insert(lines, line)
+            if #filtered_tickets == #all_tickets then
+                for i = 2, #output do
+                    table.insert(lines, output[i])
+                end
+            else
+                table.insert(lines, "Cannot filter unrecognised ticket format.")
             end
         end
+
+        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
     end
 
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    render()
 
     -- Set buffer options
     vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
@@ -308,7 +365,6 @@ function M.open_ticket_window()
 
     local function get_uuid_under_cursor()
         local line = vim.api.nvim_get_current_line()
-        -- match " uuid "
         local uuid = line:match("^%s([0-9a-fA-F]+)%s+|")
         return uuid
     end
@@ -368,8 +424,6 @@ function M.open_ticket_window()
             end
 
             vim.ui.input({ prompt = prompt_text }, function(val)
-                -- If the user pressed Esc, val is nil. We should probably abort or skip?
-                -- If they pressed enter without typing, val is "".
                 if val == nil then
                     vim.notify("Ticket creation cancelled.", vim.log.levels.INFO)
                     return
@@ -400,14 +454,14 @@ function M.open_ticket_window()
 
         local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid] LIKE '" .. uuid .. "%'" })
         if c_show == 0 and #out_show >= 2 then
-            local headers = parse_tsv(out_show[1])
+            local file_headers = parse_tsv(out_show[1])
             local values = parse_tsv(out_show[2])
 
-            vim.ui.select(headers, { prompt = "Field to edit: " }, function(field)
+            vim.ui.select(file_headers, { prompt = "Field to edit: " }, function(field)
                 if field and field ~= "" then
                     vim.schedule(function()
                         local old_value = ""
-                        for i, h in ipairs(headers) do
+                        for i, h in ipairs(file_headers) do
                             if h == field then
                                 old_value = values[i] or ""
                                 break
@@ -444,7 +498,6 @@ function M.open_ticket_window()
                                     local options_set = {}
                                     local options = {}
 
-                                    -- Add default choices from tktsetup_com
                                     for _, opt in ipairs(dropdown_fields[field]) do
                                         if not options_set[opt] then
                                             table.insert(options, opt)
@@ -452,7 +505,6 @@ function M.open_ticket_window()
                                         end
                                     end
 
-                                    -- Add existing choices from repo
                                     if opts_c == 0 then
                                         for _, opt in ipairs(opts_out) do
                                             if not options_set[opt] then
@@ -493,6 +545,104 @@ function M.open_ticket_window()
         else
             vim.notify("Failed to load ticket fields.", vim.log.levels.ERROR)
         end
+    end, opts)
+
+    local function apply_dropdown_filter(field, title)
+        fetch_ticket_choices(function(dropdown_fields)
+            vim.schedule(function()
+                local options_set = {}
+                local options = {}
+
+                if dropdown_fields[field] then
+                    for _, opt in ipairs(dropdown_fields[field]) do
+                        if not options_set[opt] then
+                            table.insert(options, opt)
+                            options_set[opt] = true
+                        end
+                    end
+                end
+
+                local query = string.format(
+                    "SELECT DISTINCT %s FROM ticket WHERE %s IS NOT NULL AND %s != '';",
+                    field,
+                    field,
+                    field
+                )
+                local opts_out, opts_c = api.exec({ "sql", query })
+                if opts_c == 0 then
+                    for _, opt in ipairs(opts_out) do
+                        if not options_set[opt] then
+                            table.insert(options, opt)
+                            options_set[opt] = true
+                        end
+                    end
+                end
+
+                if #options == 0 then
+                    vim.notify("No values found for " .. title, vim.log.levels.WARN)
+                    return
+                end
+
+                table.insert(options, 1, "[Clear Filter]")
+
+                vim.ui.select(options, { prompt = "Filter by " .. title .. ": " }, function(selected)
+                    if not selected then
+                        return
+                    end
+                    vim.schedule(function()
+                        if selected == "[Clear Filter]" then
+                            filter_state[field] = nil
+                        else
+                            filter_state[field] = selected
+                        end
+                        render()
+                    end)
+                end)
+            end)
+        end)
+    end
+
+    vim.keymap.set("n", "fs", function()
+        apply_dropdown_filter("status", "Status")
+    end, opts)
+    vim.keymap.set("n", "ft", function()
+        apply_dropdown_filter("type", "Type")
+    end, opts)
+    vim.keymap.set("n", "fv", function()
+        apply_dropdown_filter("severity", "Severity")
+    end, opts)
+    vim.keymap.set("n", "fp", function()
+        apply_dropdown_filter("priority", "Priority")
+    end, opts)
+    vim.keymap.set("n", "fr", function()
+        apply_dropdown_filter("resolution", "Resolution")
+    end, opts)
+
+    vim.keymap.set("n", "/", function()
+        vim.ui.input({ prompt = "Search tickets: ", default = filter_state.search or "" }, function(val)
+            if val == nil then
+                return
+            end
+            vim.schedule(function()
+                if val == "" then
+                    filter_state.search = nil
+                else
+                    filter_state.search = val
+                end
+                render()
+            end)
+        end)
+    end, opts)
+
+    vim.keymap.set("n", "x", function()
+        filter_state.status = nil
+        filter_state.type = nil
+        filter_state.severity = nil
+        filter_state.priority = nil
+        filter_state.resolution = nil
+        filter_state.search = nil
+        render()
+        vim.notify("Filters cleared", vim.log.levels.INFO)
     end, opts)
 
     -- Quit
