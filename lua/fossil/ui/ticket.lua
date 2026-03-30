@@ -63,11 +63,19 @@ local function fetch_ticket_choices(callback)
         local client = uv.new_tcp()
         local stdout_data = {}
 
+        local handled = false
+
         local function fallback_and_stop()
+            if handled then
+                return
+            end
+            handled = true
+
             if not client:is_closing() then
                 client:close()
             end
             vim.fn.jobstop(ui_job)
+            cached_dropdown_fields[repo_root] = fallback_fields
             callback(fallback_fields)
         end
 
@@ -90,6 +98,11 @@ local function fetch_ticket_choices(callback)
                 if chunk then
                     table.insert(stdout_data, chunk)
                 else
+                    if handled then
+                        return
+                    end
+                    handled = true
+
                     client:close()
                     vim.schedule(function()
                         vim.fn.jobstop(ui_job)
@@ -99,6 +112,7 @@ local function fetch_ticket_choices(callback)
                         -- Only parse within the active textarea to avoid picking up the default script examples
                         local textarea_content = content:match('<textarea[^>]*name="x"[^>]*>(.-)</textarea>')
                         if not textarea_content then
+                            cached_dropdown_fields[repo_root] = fallback_fields
                             callback(fallback_fields)
                             return
                         end
@@ -131,7 +145,7 @@ local function fetch_ticket_choices(callback)
 
         -- Fallback timeout (e.g. 5 seconds) just in case server hangs
         vim.defer_fn(function()
-            if not client:is_closing() then
+            if not handled and not client:is_closing() then
                 fallback_and_stop()
             end
         end, 5000)
