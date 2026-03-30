@@ -252,7 +252,7 @@ function M.open_ticket_window()
             return
         end
 
-        local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid]='" .. uuid .. "'" })
+        local out_show, c_show = api.exec({ "ticket", "show", "0", "[tkt_uuid] LIKE '" .. uuid .. "%'" })
         if c_show == 0 and #out_show >= 2 then
             local headers = parse_tsv(out_show[1])
             local values = parse_tsv(out_show[2])
