@@ -59,61 +59,82 @@ local function fetch_ticket_choices(callback)
 
     -- Give the server a moment to start
     vim.defer_fn(function()
+        local uv = vim.uv or vim.loop
+        local client = uv.new_tcp()
         local stdout_data = {}
-        local curl_job = vim.fn.jobstart({ "curl", "-s", "http://localhost:" .. port .. "/tktsetup_com" }, {
-            stdout_buffered = true,
-            on_stdout = function(_, data)
-                for _, line in ipairs(data) do
-                    table.insert(stdout_data, line)
-                end
-            end,
-            on_stderr = function() end,
-            on_exit = function(_, code)
-                vim.fn.jobstop(ui_job)
 
-                if code ~= 0 then
-                    -- Fallback if curl fails
-                    callback(fallback_fields)
-                    return
-                end
-
-                local content = table.concat(stdout_data, "\n")
-
-                -- Only parse within the active textarea to avoid picking up the default script examples
-                local textarea_content = content:match('<textarea[^>]*name="x"[^>]*>(.-)</textarea>')
-                if not textarea_content then
-                    callback(fallback_fields)
-                    return
-                end
-
-                local dropdown_fields = {
-                    status = {},
-                    type = {},
-                    severity = {},
-                    priority = {},
-                    resolution = {},
-                    subsystem = {},
-                }
-
-                -- Parse the TH1 script variables: set variable_name { values... }
-                for var_name, values_block in textarea_content:gmatch("set ([%w_]+) %{([^}]*)%}") do
-                    local field_match = var_name:match("^(%w+)_choices$")
-                    if field_match and dropdown_fields[field_match] then
-                        for value in values_block:gmatch("%S+") do
-                            table.insert(dropdown_fields[field_match], value)
-                        end
-                    end
-                end
-
-                cached_dropdown_fields[repo_root] = dropdown_fields
-                callback(dropdown_fields)
-            end,
-        })
-
-        if curl_job <= 0 then
+        local function fallback_and_stop()
+            if not client:is_closing() then
+                client:close()
+            end
             vim.fn.jobstop(ui_job)
             callback(fallback_fields)
         end
+
+        client:connect("127.0.0.1", port, function(err)
+            if err then
+                vim.schedule(fallback_and_stop)
+                return
+            end
+
+            client:write(
+                string.format("GET /tktsetup_com HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nConnection: close\r\n\r\n", port)
+            )
+
+            client:read_start(function(read_err, chunk)
+                if read_err then
+                    vim.schedule(fallback_and_stop)
+                    return
+                end
+
+                if chunk then
+                    table.insert(stdout_data, chunk)
+                else
+                    client:close()
+                    vim.schedule(function()
+                        vim.fn.jobstop(ui_job)
+
+                        local content = table.concat(stdout_data, "")
+
+                        -- Only parse within the active textarea to avoid picking up the default script examples
+                        local textarea_content = content:match('<textarea[^>]*name="x"[^>]*>(.-)</textarea>')
+                        if not textarea_content then
+                            callback(fallback_fields)
+                            return
+                        end
+
+                        local dropdown_fields = {
+                            status = {},
+                            type = {},
+                            severity = {},
+                            priority = {},
+                            resolution = {},
+                            subsystem = {},
+                        }
+
+                        -- Parse the TH1 script variables: set variable_name { values... }
+                        for var_name, values_block in textarea_content:gmatch("set ([%w_]+) %{([^}]*)%}") do
+                            local field_match = var_name:match("^(%w+)_choices$")
+                            if field_match and dropdown_fields[field_match] then
+                                for value in values_block:gmatch("%S+") do
+                                    table.insert(dropdown_fields[field_match], value)
+                                end
+                            end
+                        end
+
+                        cached_dropdown_fields[repo_root] = dropdown_fields
+                        callback(dropdown_fields)
+                    end)
+                end
+            end)
+        end)
+
+        -- Fallback timeout (e.g. 5 seconds) just in case server hangs
+        vim.defer_fn(function()
+            if not client:is_closing() then
+                fallback_and_stop()
+            end
+        end, 5000)
     end, 500)
 end
 
