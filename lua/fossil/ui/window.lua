@@ -3,15 +3,57 @@ local util = require("fossil.util")
 
 local M = {}
 
+--- Helper to safely fetch the plugin configuration
+--- @return table The plugin configuration table
+local function get_config()
+    local ok, fossil = pcall(require, "fossil")
+    if ok and fossil.config then
+        return fossil.config
+    end
+    return { window_style = "split" }
+end
+
 --- Opens a scratch buffer to show fossil command output
 --- @param name string The name of the scratch buffer
 --- @param lines table The lines to display in the buffer
 --- @return number buf The buffer ID
 function M.open_scratch_buffer(name, lines)
-    vim.cmd("botright new")
-    local buf = vim.api.nvim_get_current_buf()
+    local config = get_config()
+    local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(buf, name .. " - " .. tostring(os.time()))
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+    if config.window_style == "float" then
+        local width = math.floor(vim.o.columns * 0.8)
+        local height = math.floor(vim.o.lines * 0.8)
+        local row = math.floor((vim.o.lines - height) / 2)
+        local col = math.floor((vim.o.columns - width) / 2)
+        vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = width,
+            height = height,
+            row = row,
+            col = col,
+            style = "minimal",
+            border = "rounded",
+        })
+        -- Float specific easy quit mappings and autocmd
+        vim.keymap.set("n", "<Esc>", "<cmd>q<cr>", { buffer = buf, silent = true, noremap = true })
+        vim.api.nvim_create_autocmd("BufLeave", {
+            buffer = buf,
+            once = true,
+            callback = function()
+                if vim.api.nvim_buf_is_valid(buf) then
+                    vim.api.nvim_buf_delete(buf, { force = true })
+                end
+            end,
+        })
+    elseif config.window_style == "vsplit" then
+        vim.cmd("botright vsplit")
+        vim.api.nvim_win_set_buf(0, buf)
+    else
+        vim.cmd("botright sbuffer " .. buf)
+    end
 
     -- Set buffer options
     vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
@@ -159,6 +201,10 @@ function M.open_diffsplit(args, split_cmd, novertical, is_bang)
     end
 end
 
+--- Open a difftool quickfix or tab view
+--- @param args table The command arguments
+--- @param is_bang boolean|nil If true, retain focus on original window or run silently
+--- @return nil
 function M.open_difftool(args, is_bang)
     local is_y = false
     local filtered_args = {}
@@ -208,6 +254,9 @@ function M.open_difftool(args, is_bang)
     end
 end
 
+--- Open a mergetool list in the quickfix window
+--- @param args table The command arguments
+--- @return nil
 function M.open_mergetool(args)
     -- Fossil marks conflicts with <<<<<<< in files. We can find these with grep.
     local grep_args = { "grep", "<<<<<<<" }
