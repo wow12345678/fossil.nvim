@@ -2,34 +2,36 @@ if exists("b:current_syntax")
   finish
 endif
 
-syn match fossilHeader "^\(Changes\|Untracked\):$"
-syn match fossilUntracked "^  ? .*"
-syn match fossilInlineDiff "^    .*"
-syn match fossilAdded "^  ADDED\>.*"
-syn match fossilEdited "^  EDITED\>.*"
-syn match fossilDeleted "^  DELETED\>.*"
-syn match fossilMissing "^  MISSING\>.*"
-syn match fossilRenamed "^  RENAMED\>.*"
+" Headers
+syntax match fossilHeader "^[A-Za-z]\+:"
+syntax match fossilBranch "^Head: \zs.*"
+syntax match fossilRemote "^Remote: \zs.*"
 
-syn match fossilDiffAdd    "^    +.*"
-syn match fossilDiffRemove "^    -.*"
-syn match fossilDiffHunk   "^    @@.*"
-syn match fossilDiffHeader "^    Index:.*"
-syn match fossilDiffHeader "^    ===.*"
-syn match fossilDiffHeader "^    ---.*"
-syn match fossilDiffHeader "^    +++.*"
+" File states
+syntax match fossilStateAdded "^\s\+ADDED\s\+"
+syntax match fossilStateEdited "^\s\+EDITED\s\+"
+syntax match fossilStateDeleted "^\s\+DELETED\s\+"
+syntax match fossilStateMissing "^\s\+MISSING\s\+"
+syntax match fossilStateUntracked "^\s\+?\s\+"
 
-hi def link fossilDiffAdd    DiffAdd
-hi def link fossilDiffRemove DiffDelete
-hi def link fossilDiffHeader Type
+" Inline diffs
+syntax match fossilDiffAdd "^    +.*$"
+syntax match fossilDiffRemove "^    -.*$"
+syntax match fossilDiffContext "^    @@.*@@"
 
-hi def link fossilHeader Title
-hi def link fossilUntracked Comment
-hi def link fossilInlineDiff Comment
-hi def link fossilAdded String
-hi def link fossilEdited Identifier
-hi def link fossilDeleted Error
-hi def link fossilMissing WarningMsg
-hi def link fossilRenamed Special
+" Highlight links
+highlight default link fossilHeader Title
+highlight default link fossilBranch String
+highlight default link fossilRemote Underlined
+
+highlight default link fossilStateAdded String
+highlight default link fossilStateEdited Identifier
+highlight default link fossilStateDeleted Error
+highlight default link fossilStateMissing Error
+highlight default link fossilStateUntracked WarningMsg
+
+highlight default link fossilDiffAdd DiffAdd
+highlight default link fossilDiffRemove DiffDelete
+highlight default link fossilDiffContext DiffChange
 
 let b:current_syntax = "fossil"

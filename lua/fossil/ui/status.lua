@@ -2,102 +2,111 @@ local api = require("fossil.api")
 
 local M = {}
 
---- Parse fossil status and extras into a structured format
---- @return table lines The lines representing the fossil status
-local function get_status_lines()
-    local status_out, code = api.exec({ "status" })
-    if code ~= 0 then
-        return { "Not in a fossil repository." }
-    end
-
-    local lines = {}
-    local head = "unknown"
-    local checkout_hash = ""
-
-    -- Extract header info
-    for _, line in ipairs(status_out) do
-        if line:match("^[A-Z]+") then
-            break -- Start of file changes
+--- Parse fossil status and extras into a structured format asynchronously
+--- @param callback function Called with the structured lines
+local function get_status_lines_async(callback)
+    api.exec_async({ "status" }, nil, function(status_out, code)
+        if code ~= 0 then
+            callback({ "Not in a fossil repository." })
+            return
         end
-        local tags = line:match("^tags:%s+(.*)")
-        if tags then
-            head = tags
+
+        local lines = {}
+        local head = "unknown"
+        local checkout_hash = ""
+
+        -- Extract header info
+        for _, line in ipairs(status_out) do
+            if line:match("^[A-Z]+") then
+                break -- Start of file changes
+            end
+            local tags = line:match("^tags:%s+(.*)")
+            if tags then
+                head = tags
+            end
+            local chk = line:match("^checkout:%s+(%w+)")
+            if chk then
+                checkout_hash = string.sub(chk, 1, 10)
+            end
         end
-        local chk = line:match("^checkout:%s+(%w+)")
-        if chk then
-            checkout_hash = string.sub(chk, 1, 10)
+
+        if checkout_hash ~= "" then
+            head = head .. " (" .. checkout_hash .. ")"
         end
-    end
 
-    if checkout_hash ~= "" then
-        head = head .. " (" .. checkout_hash .. ")"
-    end
+        table.insert(lines, "Head: " .. head)
 
-    table.insert(lines, "Head: " .. head)
+        api.exec_async({ "remote" }, nil, function(remote_out, r_code)
+            if r_code == 0 and #remote_out > 0 and remote_out[1] ~= "off" then
+                table.insert(lines, "Remote: " .. remote_out[1])
+            end
 
-    local remote_out, r_code = api.exec({ "remote" })
-    if r_code == 0 and #remote_out > 0 and remote_out[1] ~= "off" then
-        table.insert(lines, "Remote: " .. remote_out[1])
-    end
+            table.insert(lines, "Help: g?")
+            table.insert(lines, "")
 
-    table.insert(lines, "Help: g?")
-    table.insert(lines, "")
+            -- Extract changes
+            local changes = {}
+            for _, line in ipairs(status_out) do
+                if line:match("^[A-Z]+") then
+                    table.insert(changes, line)
+                end
+            end
 
-    -- Extract changes
-    local changes = {}
-    for _, line in ipairs(status_out) do
-        if line:match("^[A-Z]+") then
-            table.insert(changes, line)
-        end
-    end
+            if #changes > 0 then
+                table.insert(lines, "Changes:")
+                for _, change in ipairs(changes) do
+                    table.insert(lines, "  " .. change)
+                end
+                table.insert(lines, "")
+            end
 
-    if #changes > 0 then
-        table.insert(lines, "Changes:")
-        for _, change in ipairs(changes) do
-            table.insert(lines, "  " .. change)
-        end
-        table.insert(lines, "")
-    end
-
-    -- Extract untracked files (extras)
-    local extras_out = api.exec({ "extras" })
-    if #extras_out > 0 then
-        table.insert(lines, "Untracked:")
-        for _, file in ipairs(extras_out) do
-            table.insert(lines, "  ? " .. file)
-        end
-    end
-
-    return lines
+            -- Extract untracked files (extras)
+            api.exec_async({ "extras" }, nil, function(extras_out)
+                if #extras_out > 0 then
+                    table.insert(lines, "Untracked:")
+                    for _, file in ipairs(extras_out) do
+                        table.insert(lines, "  ? " .. file)
+                    end
+                end
+                callback(lines)
+            end)
+        end)
+    end, { quiet = true })
 end
 
+--- Unstage all added files
+--- @return nil
 local function unstage_all()
-    local status_out = api.exec({ "status" })
-    local added_files = {}
-    for _, line in ipairs(status_out) do
-        local filename = line:match("^%s+ADDED%s+(.+)$")
-        if filename then
-            table.insert(added_files, filename)
+    api.exec_async({ "status" }, nil, function(status_out)
+        local added_files = {}
+        for _, line in ipairs(status_out) do
+            local filename = line:match("^%s+ADDED%s+(.+)$")
+            if filename then
+                table.insert(added_files, filename)
+            end
         end
-    end
-    if #added_files > 0 then
-        local args = { "rm", "--soft" }
-        for _, f in ipairs(added_files) do
-            table.insert(args, f)
+        if #added_files > 0 then
+            local args = { "rm", "--soft" }
+            for _, f in ipairs(added_files) do
+                table.insert(args, f)
+            end
+            api.exec_async(args, nil, function()
+                M.refresh()
+                vim.notify("Unstaged " .. #added_files .. " files.", vim.log.levels.INFO)
+            end)
+        else
+            vim.notify("Nothing to unstage.", vim.log.levels.INFO)
         end
-        api.exec(args)
-        M.refresh()
-        vim.notify("Unstaged " .. #added_files .. " files.", vim.log.levels.INFO)
-    else
-        vim.notify("Nothing to unstage.", vim.log.levels.INFO)
-    end
+    end)
 end
 
+--- Jump to a section matching a pattern
+--- @param header_pattern string The pattern to match
+--- @return nil
 local function jump_to_section(header_pattern)
-    local total = vim.api.nvim_buf_line_count(M.buf)
-    for i = 1, total do
-        local line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
-        if line and line:match(header_pattern) then
+    local lines = vim.api.nvim_buf_get_lines(M.buf, 0, -1, false)
+    for i, line in ipairs(lines) do
+        if line:match(header_pattern) then
             vim.api.nvim_win_set_cursor(0, { i, 0 })
             return
         end
@@ -107,6 +116,7 @@ end
 --- Run an action on the file under cursor
 --- @param filename string The file to open
 --- @param mode string The mode to open it with (e.g. "split", "vsplit", "tab", "pedit", "edit")
+--- @return nil
 local function open_file(filename, mode)
     local escaped = vim.fn.fnameescape(filename)
     vim.cmd("wincmd p")
@@ -125,10 +135,16 @@ end
 
 local INLINE_PREFIX = "    "
 
+--- Check if a line is an inline diff line
+--- @param line string The line content
+--- @return boolean
 local function is_inline_diff_line(line)
     return line:sub(1, #INLINE_PREFIX) == INLINE_PREFIX
 end
 
+--- Check if a line contains a file state
+--- @param line string The line content
+--- @return boolean
 local function is_file_line(line)
     if is_inline_diff_line(line) then
         return false
@@ -164,13 +180,14 @@ end
 
 --- Jump to next or previous file in the status buffer
 --- @param direction number 1 for next, -1 for previous
+--- @return nil
 local function jump_to_file(direction)
     local line_nr = vim.api.nvim_win_get_cursor(0)[1]
-    local total_lines = vim.api.nvim_buf_line_count(M.buf)
+    local lines = vim.api.nvim_buf_get_lines(M.buf, 0, -1, false)
 
     local current = line_nr + direction
-    while current > 0 and current <= total_lines do
-        local line = vim.api.nvim_buf_get_lines(M.buf, current - 1, current, false)[1]
+    while current > 0 and current <= #lines do
+        local line = lines[current]
         if line and is_file_line(line) then
             vim.api.nvim_win_set_cursor(0, { current, 0 })
             return
@@ -188,9 +205,10 @@ local function get_file_under_cursor()
     local line = vim.api.nvim_get_current_line()
 
     if is_inline_diff_line(line) then
+        local lines = vim.api.nvim_buf_get_lines(M.buf, 0, line_nr - 1, false)
         while line_nr > 1 do
             line_nr = line_nr - 1
-            line = vim.api.nvim_buf_get_lines(M.buf, line_nr - 1, line_nr, false)[1]
+            line = lines[line_nr]
             if not is_inline_diff_line(line) then
                 break
             end
@@ -207,21 +225,20 @@ end
 
 --- Remove inline diff for a file
 --- @param line_nr number The starting line number of the file entry
+--- @return nil
 local function inline_diff_remove(line_nr)
-    local total = vim.api.nvim_buf_line_count(M.buf)
-    local start = line_nr
-    local stop = start
-    while stop < total do
-        local line = vim.api.nvim_buf_get_lines(M.buf, stop, stop + 1, false)[1]
-        if not line or not is_inline_diff_line(line) then
+    local lines = vim.api.nvim_buf_get_lines(M.buf, line_nr, -1, false)
+    local stop = line_nr
+    for _, line in ipairs(lines) do
+        if not is_inline_diff_line(line) then
             break
         end
         stop = stop + 1
     end
 
-    if stop > start then
+    if stop > line_nr then
         vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-        vim.api.nvim_buf_set_lines(M.buf, start, stop, false, {})
+        vim.api.nvim_buf_set_lines(M.buf, line_nr, stop, false, {})
         vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
     end
 end
@@ -230,32 +247,37 @@ end
 --- @param line_nr number The line number where the file is listed
 --- @param filename string The file to diff
 --- @param state string The state of the file
+--- @return nil
 local function inline_diff_insert(line_nr, filename, state)
     if state == "UNTRACKED" then
         vim.notify("Cannot diff untracked file.", vim.log.levels.WARN)
         return
     end
 
-    local diff_lines = api.exec({ "diff", "--unified", filename })
-    if #diff_lines == 0 then
-        vim.notify("No diff for file.", vim.log.levels.INFO)
-        return
-    end
+    api.exec_async({ "diff", "--unified", filename }, nil, function(diff_lines)
+        if #diff_lines == 0 then
+            vim.notify("No diff for file.", vim.log.levels.INFO)
+            return
+        end
 
-    local lines = {}
-    for _, line in ipairs(diff_lines) do
-        table.insert(lines, INLINE_PREFIX .. line)
-    end
+        local lines = {}
+        for _, line in ipairs(diff_lines) do
+            table.insert(lines, INLINE_PREFIX .. line)
+        end
 
-    vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-    vim.api.nvim_buf_set_lines(M.buf, line_nr, line_nr, false, lines)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+        if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
+            vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
+            vim.api.nvim_buf_set_lines(M.buf, line_nr, line_nr, false, lines)
+            vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+        end
+    end)
 end
 
 --- Toggle inline diff for a file
 --- @param line_nr number The line number of the file entry
 --- @param filename string The file to diff
 --- @param state string The state of the file
+--- @return nil
 local function inline_diff_toggle(line_nr, filename, state)
     local next_line = vim.api.nvim_buf_get_lines(M.buf, line_nr, line_nr + 1, false)[1]
     if next_line and is_inline_diff_line(next_line) then
@@ -265,8 +287,35 @@ local function inline_diff_toggle(line_nr, filename, state)
     end
 end
 
+--- Helper to execute multiple commands sequentially via exec_async
+--- @param cmds table List of commands to execute
+--- @param callback function|nil Optional callback when all are done
+local function run_commands_async(cmds, callback)
+    if #cmds == 0 then
+        if callback then
+            callback()
+        end
+        return
+    end
+
+    local function run_next(index)
+        if index > #cmds then
+            if callback then
+                callback()
+            end
+            return
+        end
+        api.exec_async(cmds[index], nil, function()
+            run_next(index + 1)
+        end)
+    end
+
+    run_next(1)
+end
+
 --- Perform an action on the file under the cursor
 --- @param action_type string The action to perform
+--- @return nil
 local function file_action(action_type)
     local filename, state, file_line = get_file_under_cursor()
 
@@ -276,10 +325,9 @@ local function file_action(action_type)
         local line = vim.api.nvim_get_current_line()
         if line:match("^[A-Za-z]+:$") then
             -- We are on a section header. Gather all files in this section.
-            local total_lines = vim.api.nvim_buf_line_count(M.buf)
+            local lines = vim.api.nvim_buf_get_lines(M.buf, line_nr, -1, false)
             local files = {}
-            for i = line_nr + 1, total_lines do
-                local next_line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
+            for _, next_line in ipairs(lines) do
                 if next_line == "" or next_line:match("^[A-Za-z]+:$") then
                     break -- End of section
                 end
@@ -436,14 +484,13 @@ local function file_action(action_type)
             end
 
             if #commands_to_run > 0 then
-                for _, cmd in ipairs(commands_to_run) do
-                    api.exec(cmd)
-                end
-                M.refresh()
-                vim.notify(
-                    "Applied action '" .. action_type .. "' to " .. applied_count .. " files.",
-                    vim.log.levels.INFO
-                )
+                run_commands_async(commands_to_run, function()
+                    M.refresh()
+                    vim.notify(
+                        "Applied action '" .. action_type .. "' to " .. applied_count .. " files.",
+                        vim.log.levels.INFO
+                    )
+                end)
             else
                 vim.notify("No valid files for action '" .. action_type .. "'.", vim.log.levels.INFO)
             end
@@ -472,11 +519,9 @@ local function file_action(action_type)
         inline_diff_remove(file_line)
     elseif action_type == "stage" then
         if state == "UNTRACKED" then
-            api.exec({ "add", filename })
-            M.refresh()
+            api.exec_async({ "add", filename }, nil, function() M.refresh() end)
         elseif state == "MISSING" then
-            api.exec({ "rm", filename })
-            M.refresh()
+            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" or state == "DELETED" then
             vim.notify("Already added/staged.", vim.log.levels.INFO)
         else
@@ -484,11 +529,9 @@ local function file_action(action_type)
         end
     elseif action_type == "unstage" then
         if state == "ADDED" then
-            api.exec({ "rm", "--soft", filename })
-            M.refresh()
+            api.exec_async({ "rm", "--soft", filename }, nil, function() M.refresh() end)
         elseif state == "DELETED" then
-            api.exec({ "revert", filename })
-            M.refresh()
+            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
         elseif state == "UNTRACKED" then
             vim.notify("File is untracked.", vim.log.levels.INFO)
         else
@@ -496,30 +539,23 @@ local function file_action(action_type)
         end
     elseif action_type == "toggle" then
         if state == "UNTRACKED" then
-            api.exec({ "add", filename })
-            M.refresh()
+            api.exec_async({ "add", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" then
-            api.exec({ "rm", "--soft", filename })
-            M.refresh()
+            api.exec_async({ "rm", "--soft", filename }, nil, function() M.refresh() end)
         elseif state == "MISSING" then
-            api.exec({ "rm", filename })
-            M.refresh()
+            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
         elseif state == "DELETED" then
-            api.exec({ "revert", filename })
-            M.refresh()
+            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
         else
             vim.notify("Fossil has no staging for tracked files.", vim.log.levels.INFO)
         end
     elseif action_type == "discard" then
         if state == "UNTRACKED" then
-            api.exec({ "clean", "--force", filename })
-            M.refresh()
+            api.exec_async({ "clean", "--force", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" then
-            api.exec({ "rm", filename })
-            M.refresh()
+            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
         else
-            api.exec({ "revert", filename })
-            M.refresh()
+            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
         end
     elseif action_type == "open" then
         open_file(filename, "edit")
@@ -534,6 +570,9 @@ local function file_action(action_type)
     end
 end
 
+--- Select and apply/pop a stash
+--- @param action string The stash action ("apply" or "pop")
+--- @return nil
 local function select_stash(action)
     local output = api.exec({ "stash", "ls" })
     if #output == 0 or (#output == 1 and output[1] == "empty stash") then
@@ -599,17 +638,27 @@ local function select_stash(action)
 end
 
 --- Refresh the status buffer
+--- @return nil
 function M.refresh()
     if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
         return
     end
-    local lines = get_status_lines()
     vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-    vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, { "Loading..." })
     vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+
+    get_status_lines_async(function(lines)
+        if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
+            return
+        end
+        vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
+        vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
+        vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+    end)
 end
 
 --- Open the status window
+--- @return nil
 function M.open_status_window()
     -- Check if already open
     if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
