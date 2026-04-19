@@ -400,49 +400,97 @@ function M.open_ticket_window()
 
         local args = { "ticket", "add" }
 
-        local function prompt_field(idx)
-            if idx > #fields then
-                if #args > 2 then
-                    local out, c = api.exec(args)
-                    if c == 0 then
-                        vim.notify("Created ticket.", vim.log.levels.INFO)
-                        vim.cmd("q")
-                        M.open_ticket_window()
-                    else
-                        vim.notify("Failed to create ticket:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+        fetch_ticket_choices(function(dropdown_fields)
+            vim.schedule(function()
+                local function prompt_field(idx)
+                    if idx > #fields then
+                        if #args > 2 then
+                            local out, c = api.exec(args)
+                            if c == 0 then
+                                vim.notify("Created ticket.", vim.log.levels.INFO)
+                                vim.cmd("q")
+                                M.open_ticket_window()
+                            else
+                                vim.notify("Failed to create ticket:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+                            end
+                        else
+                            vim.notify("No fields provided, ticket creation cancelled.", vim.log.levels.WARN)
+                        end
+                        return
                     end
-                else
-                    vim.notify("No fields provided, ticket creation cancelled.", vim.log.levels.WARN)
-                end
-                return
-            end
 
-            local field = fields[idx]
-            local prompt_text = "Value for " .. field .. " (leave empty to skip): "
-            if field == "title" then
-                prompt_text = "Title (required): "
-            end
+                    local field = fields[idx]
+                    local prompt_text = "Value for " .. field .. " (leave empty to skip): "
+                    if field == "title" then
+                        prompt_text = "Title (required): "
+                    end
 
-            vim.ui.input({ prompt = prompt_text }, function(val)
-                if val == nil then
-                    vim.notify("Ticket creation cancelled.", vim.log.levels.INFO)
-                    return
+                    local function handle_input(val)
+                        if val == nil then
+                            vim.notify("Ticket creation cancelled.", vim.log.levels.INFO)
+                            return
+                        end
+
+                        if val ~= "" then
+                            table.insert(args, field)
+                            table.insert(args, val)
+                        elseif field == "title" then
+                            vim.notify("Title is required. Ticket creation cancelled.", vim.log.levels.WARN)
+                            return
+                        end
+                        vim.schedule(function()
+                            prompt_field(idx + 1)
+                        end)
+                    end
+
+                    if dropdown_fields[field] then
+                        local query = string.format(
+                            "SELECT DISTINCT %s FROM ticket WHERE %s IS NOT NULL AND %s != '';",
+                            field,
+                            field,
+                            field
+                        )
+                        local opts_out, opts_c = api.exec({ "sql", query })
+
+                        local options_set = {}
+                        local options = {}
+
+                        for _, opt in ipairs(dropdown_fields[field]) do
+                            if not options_set[opt] then
+                                table.insert(options, opt)
+                                options_set[opt] = true
+                            end
+                        end
+
+                        if opts_c == 0 then
+                            for _, opt in ipairs(opts_out) do
+                                if not options_set[opt] then
+                                    table.insert(options, opt)
+                                    options_set[opt] = true
+                                end
+                            end
+                        end
+                        table.insert(options, "[Type custom value...]")
+
+                        vim.ui.select(options, { prompt = prompt_text }, function(selected)
+                            vim.schedule(function()
+                                if selected == nil then
+                                    handle_input(nil)
+                                elseif selected == "[Type custom value...]" then
+                                    vim.ui.input({ prompt = prompt_text }, handle_input)
+                                else
+                                    handle_input(selected)
+                                end
+                            end)
+                        end)
+                    else
+                        vim.ui.input({ prompt = prompt_text }, handle_input)
+                    end
                 end
 
-                if val ~= "" then
-                    table.insert(args, field)
-                    table.insert(args, val)
-                elseif field == "title" then
-                    vim.notify("Title is required. Ticket creation cancelled.", vim.log.levels.WARN)
-                    return
-                end
-                vim.schedule(function()
-                    prompt_field(idx + 1)
-                end)
+                prompt_field(1)
             end)
-        end
-
-        prompt_field(1)
+        end)
     end, opts)
 
     -- Edit Ticket
