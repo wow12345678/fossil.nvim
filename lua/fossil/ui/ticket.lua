@@ -27,7 +27,8 @@ end
 
 --- Get a random available port
 local function get_free_port()
-    local server = vim.loop.new_tcp()
+    local uv = vim.uv or vim.loop
+    local server = uv.new_tcp()
     server:bind("127.0.0.1", 0)
     local port = server:getsockname().port
     server:close()

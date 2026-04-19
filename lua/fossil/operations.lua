@@ -77,7 +77,7 @@ function M.edit(args)
     vim.cmd("edit " .. vim.fn.fnameescape(target))
 end
 
-function M.browse(args)
+function M.ui(args)
     local output, code = api.exec({ "remote" })
     if code ~= 0 or #output == 0 or output[1] == "" then
         vim.notify("No remote found or fossil remote failed.", vim.log.levels.ERROR)
@@ -310,6 +310,65 @@ function M.edit_with_cmd(args, vim_cmd)
     end
     local target = util.resolve_target_path(filename) or filename
     vim.cmd(vim_cmd .. " " .. vim.fn.fnameescape(target))
+end
+
+function M.conflict_split(split_cmd)
+    local cur_win = vim.api.nvim_get_current_win()
+    local cur_buf = vim.api.nvim_get_current_buf()
+    local lines = vim.api.nvim_buf_get_lines(cur_buf, 0, -1, false)
+
+    local local_lines = {}
+    local remote_lines = {}
+    local state = "normal"
+
+    for _, line in ipairs(lines) do
+        if line:match("^<<<<<<< BEGIN MERGE CONFLICT") then
+            state = "local"
+        elseif line:match("^=======") and state == "local" then
+            state = "remote"
+        elseif line:match("^>>>>>>> END MERGE CONFLICT") and state == "remote" then
+            state = "normal"
+        else
+            if state == "normal" then
+                table.insert(local_lines, line)
+                table.insert(remote_lines, line)
+            elseif state == "local" then
+                table.insert(local_lines, line)
+            elseif state == "remote" then
+                table.insert(remote_lines, line)
+            end
+        end
+    end
+
+    local filetype = vim.api.nvim_get_option_value("filetype", { buf = cur_buf })
+
+    local function create_scratch(name, content)
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(buf, name)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+        vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+        vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+        if filetype and filetype ~= "" then
+            vim.api.nvim_set_option_value("filetype", filetype, { buf = buf })
+        end
+        return buf
+    end
+
+    local local_buf = create_scratch("Local (MERGE)", local_lines)
+    local remote_buf = create_scratch("Remote (MERGE)", remote_lines)
+
+    vim.cmd("leftabove " .. split_cmd)
+    vim.api.nvim_win_set_buf(0, local_buf)
+
+    vim.api.nvim_set_current_win(cur_win)
+
+    vim.cmd("rightbelow " .. split_cmd)
+    vim.api.nvim_win_set_buf(0, remote_buf)
+
+    vim.api.nvim_set_current_win(cur_win)
+    vim.cmd("windo diffthis")
+    vim.api.nvim_set_current_win(cur_win)
 end
 
 return M

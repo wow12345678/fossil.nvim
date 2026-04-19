@@ -37,7 +37,7 @@ local fossil_cmd_opts = {
             "read",
             "write",
             "edit",
-            "browse",
+            "ui",
             "checkout",
             "co",
             "tag",
@@ -86,7 +86,7 @@ local shortcut_cmds = {
     FRead = { cmd = "read", bang = true, nargs = "*", complete = "file" },
     FWrite = { cmd = "write", bang = true, nargs = "*", complete = "file" },
     FEdit = { cmd = "edit", bang = true, nargs = "*", complete = "file" },
-    FBrowse = { cmd = "browse", bang = true, nargs = "*", complete = "file" },
+    FUi = { cmd = "ui", bang = true, nargs = "*", complete = "file" },
     FCheckout = { cmd = "checkout", bang = true, nargs = "*", complete = "file" },
     FBranch = { cmd = "branch", nargs = "*" },
     FTicket = { cmd = "ticket", nargs = "*" },
@@ -173,19 +173,32 @@ function _G.FossilStatusline()
         return ""
     end
 
-    local now = vim.uv.now()
+    local uv = vim.uv or vim.loop
+    local now = uv.now()
     local cache = statusline_cache[root]
 
-    if cache and (now - cache.time < 5000) then
-        return cache.text
+    if cache then
+        if now - cache.time < 5000 then
+            return cache.text
+        end
+        if cache.updating then
+            return cache.text
+        end
+    else
+        cache = { time = 0, text = "", updating = false }
+        statusline_cache[root] = cache
     end
 
-    local output, code = require("fossil.api").exec({ "branch", "current" })
-    if code == 0 and output[1] then
-        local text = "[Fossil(" .. output[1] .. ")]"
-        statusline_cache[root] = { time = now, text = text }
-        return text
-    end
+    cache.updating = true
+    require("fossil.api").exec_async({ "branch", "current" }, nil, function(output, code)
+        local text = ""
+        if code == 0 and output[1] then
+            text = "[Fossil(" .. output[1] .. ")]"
+        end
+        local uv = vim.uv or vim.loop
+        statusline_cache[root] = { time = uv.now(), text = text, updating = false }
+        vim.cmd("redrawstatus")
+    end, { quiet = true })
 
-    return ""
+    return cache.text
 end

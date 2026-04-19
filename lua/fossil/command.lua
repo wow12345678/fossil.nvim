@@ -45,7 +45,7 @@ function M.show_help()
         "  pull, push, sync, fetch",
         "    Synchronize with a remote repository.",
         "",
-        "  browse",
+        "  ui",
         "    Open the remote repository in a web browser.",
         "",
         "  help",
@@ -66,10 +66,18 @@ local commands = {
     blame = blame.open_blame_view,
     annotate = blame.open_blame_view,
     diffsplit = function(args, is_bang)
-        window.open_diffsplit(args, nil, false, is_bang)
+        if is_bang then
+            ops.conflict_split("split")
+        else
+            window.open_diffsplit(args, nil, false, is_bang)
+        end
     end,
     vdiffsplit = function(args, is_bang)
-        window.open_diffsplit(args, "vsplit", false, is_bang)
+        if is_bang then
+            ops.conflict_split("vsplit")
+        else
+            window.open_diffsplit(args, "vsplit", false, is_bang)
+        end
     end,
     hdiffsplit = function(args, is_bang)
         window.open_diffsplit(args, "split", true, is_bang)
@@ -112,7 +120,7 @@ local commands = {
     read = ops.read,
     write = ops.write,
     edit = ops.edit,
-    browse = ops.browse,
+    ui = ops.ui,
     commit = commit.open_commit_buffer,
     delete = function(args)
         ops.delete(args, false)

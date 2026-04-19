@@ -119,7 +119,7 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
 :FPedit [file]                                             *:FPedit*
         Opens the file in a preview window (similar to `:Gpedit`).
 
-:FBrowse [file]                                           *:FBrowse*
+:FUi [file]                                               *:FUi*
         Opens the file or repo in the browser using the remote URL.
 
 :FCheckout [args]                                       *:FCheckout*
