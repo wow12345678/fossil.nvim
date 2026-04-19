@@ -64,9 +64,11 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
 
 :FDiffsplit [file]                                     *:FDiffsplit*
         Opens a diff split for the file (defaults to current buffer).
+        With [!], opens a 3-way merge conflict resolution layout.
 
 :FVdiffsplit [file]                                   *:FVdiffsplit*
         Opens a vertical diff split for the file.
+        With [!], opens a vertical 3-way merge conflict resolution layout.
 
 :FHdiffsplit [file]                                   *:FHdiffsplit*
         Opens a horizontal diff split for the file.
@@ -120,7 +122,7 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
         Opens the file in a preview window (similar to `:Gpedit`).
 
 :FUi [file]                                               *:FUi*
-        Opens the file or repo in the browser using the remote URL.
+        Opens the file or repo in the browser using the local web server.
 
 :FCheckout [args]                                       *:FCheckout*
 :FCo [args]                                                   *:FCo*
@@ -204,8 +206,8 @@ shortcut commands that act as aliases for `:F[ossil] <command>`.
 3. Status Window                                               *fossil-status*
 
 The Status Window is the primary interface for interacting with your
-repository's current state. It displays a list of untracked, added, edited,
-missing, and deleted files.
+repository's current state. It displays a remote sync status indicator at the
+top, along with a list of untracked, added, edited, missing, and deleted files.
 
 From this window, you can view diffs, stage (add) or unstage (rm) files,
 and initiate a commit. Open it with `:Fossil` or `:Fossil status`.
@@ -309,7 +311,9 @@ s               Stage (add) file or section under cursor.
 u               Unstage (untrack) file or section under cursor.
 -               Toggle stage/unstage status for file or section under cursor.
 U               Unstage (rm --soft) all added files.
-X               Discard changes for file or section under cursor.
+X               Discard changes for file or section under cursor. If used inside
+                an expanded inline diff, reverts that specific hunk from the
+                working tree.
 
 [ Diffing & Review ]
 dd              Open diff in a split (internal default).
@@ -331,6 +335,7 @@ czp             Select a stash to pop.
 czA             Apply the most recent stash instantly.
 czP             Pop the most recent stash instantly.
 R               Refresh the status window.
+f               Trigger an asynchronous background sync.
 
 [ Command Line Population ]
 c<Space>        Populate command line with :Fossil commit .

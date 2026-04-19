@@ -6,8 +6,8 @@ A Neovim plugin for Fossil SCM, inspired by [vim-fugitive](https://github.com/tp
 
 ## Features
 
-- **Status Window**: A dedicated interactive window to view untracked, added, edited, and missing files. Emulates a staging area with mappings like `-` to selectively track untracked files or remove missing files.
-- **Diff View**: Quickly view diffs of your changes with Neovim's syntax highlighting.
+- **Status Window**: A dedicated interactive window to view untracked, added, edited, and missing files. Emulates a staging area with mappings like `-` to selectively track untracked files or remove missing files. Features a real-time remote sync indicator at the top and the ability to asynchronously sync with `f`. You can also revert specific hunks from the working tree by pressing `X` while inside an inline diff.
+- **Diff View**: Quickly view diffs of your changes with Neovim's syntax highlighting. Use `:FDiffsplit!` and `:FVdiffsplit!` for interactive 3-way merge conflict resolution.
 - **Commit Flow**: Write commit messages directly in a Neovim buffer. The commit buffer is automatically populated with a commented list of staged and untracked files so you have context while writing your message.
 - **Interactive Timeline**: View the repository log (`fossil timeline`), view commit details, diffs, and easily checkout past check-ins.
 - **File History**: Track the history of the current file (`fossil finfo`), view older versions, or perform two-way diffs between historic versions and your working copy.
@@ -58,6 +58,7 @@ A few common commands to get started:
 - `:Fossil add <file>` (or `:FAdd <file>`): Adds the specified file.
 - `:Fossil rm <file>` (or `:FRm <file>`): Removes the specified file.
 - `:Fossil blame <file>` (or `:FBlame <file>`): Opens a blame view in a scroll-bound split.
+- `:FUi [file]`: Opens the file or repository in the browser using the local web server.
 - `:Fossil wq [file]` (or `:FWq [file]`): Writes the current buffer, adds it to fossil, and quits (like `:Gwq`).
 
 You can also run any other fossil command using `:F[ossil] <command> [args...]`. For example, `:F branch` or `:F timeline`. Every `:Fossil <command>` also has a `:F<command>` variant (like `:FStatus`, `:FCommit`, `:FDiffsplit`, etc).
