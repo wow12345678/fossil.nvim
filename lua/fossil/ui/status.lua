@@ -48,54 +48,79 @@ local function get_status_lines_async(callback)
                     autosync_state = "off"
                 end
 
-                api.exec_async({ "unpushed" }, nil, function(unpushed_out)
+                api.exec_async({ "push", "--dry-run" }, nil, function(push_out, p_code)
                     local unpushed_count = 0
-                    for _, line in ipairs(unpushed_out) do
-                        if line:match("^[0-9a-fA-F]+") then
-                            unpushed_count = unpushed_count + 1
-                        end
+                    for _, line in ipairs(push_out) do
+                        local sent = line:match("Sent:%s*(%d+)")
+                        if sent then unpushed_count = tonumber(sent) end
+                        
+                        local unpushed = line:match("Unpushed:%s*(%d+)") or line:match("unpushed:%s*(%d+)")
+                        if unpushed then unpushed_count = tonumber(unpushed) end
+                        
+                        local artifacts = line:match("Artifacts sent:%s*(%d+)")
+                        if artifacts then unpushed_count = tonumber(artifacts) end
                     end
 
-                    if remote_str then
-                        local sync_str = "Remote: " .. remote_str .. " (autosync " .. autosync_state .. ")"
-                        if unpushed_count > 0 then
-                            sync_str = sync_str .. " - Ahead " .. tostring(unpushed_count)
-                        else
-                            sync_str = sync_str .. " - Up to date"
+                    local function finish_status()
+                        if remote_str then
+                            local sync_str = "Remote: " .. remote_str .. " (autosync " .. autosync_state .. ")"
+                            if unpushed_count > 0 then
+                                sync_str = sync_str .. " - Ahead " .. tostring(unpushed_count)
+                            else
+                                sync_str = sync_str .. " - Up to date"
+                            end
+                            table.insert(lines, sync_str)
                         end
-                        table.insert(lines, sync_str)
-                    end
 
-                    table.insert(lines, "Help: g?")
-                    table.insert(lines, "")
-
-                    -- Extract changes
-                    local changes = {}
-                    for _, line in ipairs(status_out) do
-                        if line:match("^[A-Z]+") then
-                            table.insert(changes, line)
-                        end
-                    end
-
-                    if #changes > 0 then
-                        table.insert(lines, "Changes:")
-                        for _, change in ipairs(changes) do
-                            table.insert(lines, "  " .. change)
-                        end
+                        table.insert(lines, "Help: g?")
                         table.insert(lines, "")
-                    end
 
-                    -- Extract untracked files (extras)
-                    api.exec_async({ "extras" }, nil, function(extras_out)
-                        if #extras_out > 0 then
-                            table.insert(lines, "Untracked:")
-                            for _, file in ipairs(extras_out) do
-                                table.insert(lines, "  ? " .. file)
+                        -- Extract changes
+                        local changes = {}
+                        for _, line in ipairs(status_out) do
+                            if line:match("^[A-Z]+") then
+                                table.insert(changes, line)
                             end
                         end
-                        callback(lines)
-                    end)
-                end)
+
+                        if #changes > 0 then
+                            table.insert(lines, "Changes:")
+                            for _, change in ipairs(changes) do
+                                table.insert(lines, "  " .. change)
+                            end
+                            table.insert(lines, "")
+                        end
+
+                        -- Extract untracked files (extras)
+                        api.exec_async({ "extras" }, nil, function(extras_out)
+                            if #extras_out > 0 then
+                                table.insert(lines, "Untracked:")
+                                for _, file in ipairs(extras_out) do
+                                    table.insert(lines, "  ? " .. file)
+                                end
+                            end
+                            callback(lines)
+                        end)
+                    end
+
+                    -- Also check test-unsent as a fallback if dry-run isn't supported or fails
+                    if p_code ~= 0 and #push_out > 0 and (push_out[1]:match("unknown repository") or push_out[1]:match("Usage:")) then
+                        unpushed_count = 0
+                        api.exec_async({ "test-unsent" }, nil, function(unsent_out, u_code)
+                            if u_code == 0 then
+                                for _, line in ipairs(unsent_out) do
+                                    if line:match("check%-in") then
+                                        unpushed_count = unpushed_count + 1
+                                    end
+                                end
+                            end
+                            finish_status()
+                        end, { quiet = true })
+                        return
+                    end
+
+                    finish_status()
+                end, { quiet = true })
             end)
         end)
     end, { quiet = true })
