@@ -45,7 +45,7 @@ function M.read(args)
     end
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, output)
-    vim.api.nvim_set_option_value("modified", false, { buf = buf })
+    -- The restored contents may differ from disk; keep them pending a write.
     vim.notify("Read " .. target .. " from fossil.", vim.log.levels.INFO)
 end
 
