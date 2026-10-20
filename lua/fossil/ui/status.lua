@@ -881,7 +881,15 @@ function M.open_status_window()
     vim.keymap.set("n", ".", function()
         local filename = get_file_under_cursor()
         if filename then
-            feed(":F " .. filename .. "<C-B><C-Right><Right> ")
+            -- Set the filename as command-line text, never as executable keys.
+            vim.api.nvim_create_autocmd("CmdlineEnter", {
+                pattern = ":",
+                once = true,
+                callback = function()
+                    vim.fn.setcmdline("F  " .. vim.fn.fnameescape(filename), 3)
+                end,
+            })
+            feed(":")
         end
     end, opts)
 
