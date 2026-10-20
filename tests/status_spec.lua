@@ -8,8 +8,8 @@ describe("fossil.ui.status", function()
     end)
 
     it("should parse status properly (mocked)", function()
-        local original_exec = api.exec
-        api.exec = function(args)
+        local original_exec_async = api.exec_async
+        local function output(args)
             if args[1] == "status" then
                 return {
                     "repository: /test",
@@ -25,6 +25,10 @@ describe("fossil.ui.status", function()
                 return { "http://localhost:8080" }, 0
             end
             return {}, 0
+        end
+
+        api.exec_async = function(args, _, callback)
+            callback(output(args))
         end
 
         status.open_status_window()
@@ -45,6 +49,6 @@ describe("fossil.ui.status", function()
         assert.are.same("Untracked:", lines[8])
         assert.are.same("  ? untracked.txt", lines[9])
 
-        api.exec = original_exec
+        api.exec_async = original_exec_async
     end)
 end)
