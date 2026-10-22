@@ -111,7 +111,7 @@ function M.open_wiki_window()
 
     local function get_page_under_cursor()
         local line = vim.api.nvim_get_current_line()
-        if line:match("^=*") or line:match("^|") or line:match("^ <") or line:match("^ [a-z] ") or line == "" then
+        if line:match("^=+") or line:match("^|") or line:match("^ <") or line:match("^ [a-z] ") or line == "" then
             return nil
         end
         local page = line:match("^%s*(.+)$")
