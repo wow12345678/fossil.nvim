@@ -19,7 +19,7 @@ function M.open_blame_view(args)
         return
     end
 
-    vim.cmd("vsplit")
+    vim.cmd("vnew")
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_name(buf, "Fossil blame")
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, output)
