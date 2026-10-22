@@ -1,9 +1,17 @@
 local api = require("fossil.api")
+local util = require("fossil.util")
 
 local M = {}
 
 --- Prepare a commit buffer
 function M.open_commit_buffer(args)
+    -- Preserve the original directory, including relative file arguments.
+    local cwd = vim.fn.getcwd()
+    if not util.get_repo_root() then
+        vim.notify("Not in a fossil checkout.", vim.log.levels.ERROR)
+        return
+    end
+
     vim.cmd("botright new")
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_name(buf, "Fossil Commit - " .. tostring(os.time()))
@@ -16,7 +24,7 @@ function M.open_commit_buffer(args)
         "",
     }
 
-    local changes, _ = api.exec({ "changes" })
+    local changes, _ = api.exec({ "changes" }, cwd)
     if #changes > 0 then
         table.insert(template, "Changes to be committed:")
         for _, line in ipairs(changes) do
@@ -25,7 +33,7 @@ function M.open_commit_buffer(args)
         table.insert(template, "")
     end
 
-    local extras, _ = api.exec({ "extras" })
+    local extras, _ = api.exec({ "extras" }, cwd)
     if #extras > 0 then
         table.insert(template, "Untracked files:")
         for _, line in ipairs(extras) do
@@ -65,7 +73,7 @@ function M.open_commit_buffer(args)
                     table.insert(commit_args, args[i])
                 end
 
-                local out, code = api.exec(commit_args)
+                local out, code = api.exec(commit_args, cwd)
                 os.remove(tmp)
 
                 if code == 0 then
