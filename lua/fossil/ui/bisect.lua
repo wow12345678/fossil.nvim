@@ -18,7 +18,9 @@ function M.open_bisect_window()
         if #new_content == 0 then
             new_content = { "Bisect is not active or no log available." }
         end
+        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, new_content)
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
     end
 
     local function bisect_action(action)
