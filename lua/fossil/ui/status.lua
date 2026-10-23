@@ -886,7 +886,9 @@ function M.open_status_window()
                 pattern = ":",
                 once = true,
                 callback = function()
-                    vim.fn.setcmdline("F  " .. vim.fn.fnameescape(filename), 3)
+                    -- :F uses fargs, which only unescapes whitespace and backslashes.
+                    local escaped = vim.fn.escape(filename, " \t\\")
+                    vim.fn.setcmdline("F  " .. escaped, 3)
                 end,
             })
             feed(":")
