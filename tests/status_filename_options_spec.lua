@@ -34,7 +34,7 @@ describe("status filename arguments", function()
             if args[1] == "status" then
                 local lines = { "tags: trunk" }
                 if state ~= "UNTRACKED" then
-                    table.insert(lines, state .. "     --verily")
+                    table.insert(lines, string.format("%-10s %s", state, "--verily"))
                 end
                 callback(lines, 0)
             elseif args[1] == "extras" then

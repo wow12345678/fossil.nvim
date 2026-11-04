@@ -1,11 +1,13 @@
 local api = require("fossil.api")
 
 local M = {}
+local status_cwd
 
 --- Parse fossil status and extras into a structured format asynchronously
+--- @param cwd string Directory that the displayed filenames are relative to
 --- @param callback function Called with the structured lines
-local function get_status_lines_async(callback)
-    api.exec_async({ "status" }, nil, function(status_out, code)
+local function get_status_lines_async(cwd, callback)
+    api.exec_async({ "status", "--rel-paths" }, cwd, function(status_out, code)
         if code ~= 0 then
             callback({ "Not in a fossil repository." })
             return
@@ -36,39 +38,101 @@ local function get_status_lines_async(callback)
 
         table.insert(lines, "Head: " .. head)
 
-        api.exec_async({ "remote" }, nil, function(remote_out, r_code)
+        api.exec_async({ "remote" }, cwd, function(remote_out, r_code)
+            local remote_str = nil
             if r_code == 0 and #remote_out > 0 and remote_out[1] ~= "off" then
-                table.insert(lines, "Remote: " .. remote_out[1])
+                remote_str = remote_out[1]
             end
 
-            table.insert(lines, "Help: g?")
-            table.insert(lines, "")
-
-            -- Extract changes
-            local changes = {}
-            for _, line in ipairs(status_out) do
-                if line:match("^[A-Z]+") then
-                    table.insert(changes, line)
+            api.exec_async({ "settings", "autosync" }, cwd, function(autosync_out)
+                local autosync_state = "on"
+                if #autosync_out > 0 and (autosync_out[1]:match("%s0$") or autosync_out[1]:match("%soff$")) then
+                    autosync_state = "off"
                 end
-            end
 
-            if #changes > 0 then
-                table.insert(lines, "Changes:")
-                for _, change in ipairs(changes) do
-                    table.insert(lines, "  " .. change)
-                end
-                table.insert(lines, "")
-            end
+                api.exec_async({ "push", "--dry-run" }, cwd, function(push_out, p_code)
+                    local unpushed_count = 0
+                    for _, line in ipairs(push_out) do
+                        local sent = line:match("Sent:%s*(%d+)")
+                        if sent then
+                            unpushed_count = tonumber(sent)
+                        end
 
-            -- Extract untracked files (extras)
-            api.exec_async({ "extras" }, nil, function(extras_out)
-                if #extras_out > 0 then
-                    table.insert(lines, "Untracked:")
-                    for _, file in ipairs(extras_out) do
-                        table.insert(lines, "  ? " .. file)
+                        local unpushed = line:match("Unpushed:%s*(%d+)") or line:match("unpushed:%s*(%d+)")
+                        if unpushed then
+                            unpushed_count = tonumber(unpushed)
+                        end
+
+                        local artifacts = line:match("Artifacts sent:%s*(%d+)")
+                        if artifacts then
+                            unpushed_count = tonumber(artifacts)
+                        end
                     end
-                end
-                callback(lines)
+
+                    local function finish_status()
+                        if remote_str then
+                            local sync_str = "Remote: " .. remote_str .. " (autosync " .. autosync_state .. ")"
+                            if unpushed_count > 0 then
+                                sync_str = sync_str .. " - Ahead " .. tostring(unpushed_count)
+                            else
+                                sync_str = sync_str .. " - Up to date"
+                            end
+                            table.insert(lines, sync_str)
+                        end
+
+                        table.insert(lines, "Help: g?")
+                        table.insert(lines, "")
+
+                        -- Extract changes
+                        local changes = {}
+                        for _, line in ipairs(status_out) do
+                            if line:match("^[A-Z]+") then
+                                table.insert(changes, line)
+                            end
+                        end
+
+                        if #changes > 0 then
+                            table.insert(lines, "Changes:")
+                            for _, change in ipairs(changes) do
+                                table.insert(lines, "  " .. change)
+                            end
+                            table.insert(lines, "")
+                        end
+
+                        -- Extract untracked files (extras)
+                        api.exec_async({ "extras", "--rel-paths" }, cwd, function(extras_out)
+                            if #extras_out > 0 then
+                                table.insert(lines, "Untracked:")
+                                for _, file in ipairs(extras_out) do
+                                    table.insert(lines, "  ? " .. file)
+                                end
+                            end
+                            callback(lines)
+                        end)
+                    end
+
+                    -- Also check test-unsent as a fallback if dry-run isn't supported or fails
+                    if
+                        p_code ~= 0
+                        and #push_out > 0
+                        and (push_out[1]:match("unknown repository") or push_out[1]:match("Usage:"))
+                    then
+                        unpushed_count = 0
+                        api.exec_async({ "test-unsent" }, cwd, function(unsent_out, u_code)
+                            if u_code == 0 then
+                                for _, line in ipairs(unsent_out) do
+                                    if line:match("check%-in") then
+                                        unpushed_count = unpushed_count + 1
+                                    end
+                                end
+                            end
+                            finish_status()
+                        end, { quiet = true })
+                        return
+                    end
+
+                    finish_status()
+                end, { quiet = true })
             end)
         end)
     end, { quiet = true })
@@ -163,14 +227,18 @@ end
 --- @return string|nil filename The filename
 --- @return string|nil state The state of the file (e.g. "ADDED", "EDITED", "UNTRACKED")
 local function parse_file_line(line)
-    -- Match "  ADDED      filename" or "  EDITED     filename"
-    local state, filename = line:match("^%s+([A-Z]+)%s+(.+)$")
-    if state and filename then
-        return filename, state
+    local state, rest = line:match("^  ([A-Z]+)( .+)$")
+    if state then
+        -- Fossil left-aligns the state in a ten-character field. Keep any
+        -- whitespace after that field and the separator as part of the name.
+        local padding = string.rep(" ", math.max(11 - #state, 1))
+        local filename = rest:sub(1, #padding) == padding and rest:sub(#padding + 1) or rest:gsub("^%s+", "")
+        if filename ~= "" then
+            return filename, state
+        end
     end
 
-    -- Match "  ? filename"
-    local untracked_file = line:match("^%s+%?%s+(.+)$")
+    local untracked_file = line:match("^  %? (.+)$")
     if untracked_file then
         return untracked_file, "UNTRACKED"
     end
@@ -254,7 +322,10 @@ local function inline_diff_insert(line_nr, filename, state)
         return
     end
 
-    api.exec_async({ "diff", "--unified", "--", filename }, nil, function(diff_lines)
+    local buf = M.buf
+    local cwd = status_cwd
+    local file_entry = vim.api.nvim_buf_get_lines(buf, line_nr - 1, line_nr, false)[1]
+    api.exec_async({ "diff", "--unified", "--", filename }, cwd, function(diff_lines)
         if #diff_lines == 0 then
             vim.notify("No diff for file.", vim.log.levels.INFO)
             return
@@ -265,10 +336,18 @@ local function inline_diff_insert(line_nr, filename, state)
             table.insert(lines, INLINE_PREFIX .. line)
         end
 
-        if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
-            vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-            vim.api.nvim_buf_set_lines(M.buf, line_nr, line_nr, false, lines)
-            vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+        if
+            M.buf == buf
+            and vim.api.nvim_buf_is_valid(buf)
+            and status_cwd == cwd
+            and vim.api.nvim_buf_get_lines(buf, line_nr - 1, line_nr, false)[1] == file_entry
+        then
+            local next_line = vim.api.nvim_buf_get_lines(buf, line_nr, line_nr + 1, false)[1]
+            if not next_line or not is_inline_diff_line(next_line) then
+                vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+                vim.api.nvim_buf_set_lines(buf, line_nr, line_nr, false, lines)
+                vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+            end
         end
     end)
 end
@@ -550,6 +629,80 @@ local function file_action(action_type)
             vim.notify("Fossil has no staging for tracked files.", vim.log.levels.INFO)
         end
     elseif action_type == "discard" then
+        local current_line = vim.api.nvim_get_current_line()
+        if is_inline_diff_line(current_line) then
+            local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+            local lines = vim.api.nvim_buf_get_lines(M.buf, 0, -1, false)
+
+            -- Find the start of the hunk
+            local start_row = cur_row
+            while start_row > 0 do
+                local line = lines[start_row]
+                if not is_inline_diff_line(line) then
+                    vim.notify("Could not find hunk header.", vim.log.levels.WARN)
+                    return
+                end
+                if line:match("^" .. INLINE_PREFIX .. "@@") then
+                    break
+                end
+                start_row = start_row - 1
+            end
+
+            -- Find the end of the hunk
+            local end_row = start_row + 1
+            while end_row <= #lines do
+                local line = lines[end_row]
+                if not is_inline_diff_line(line) or line:match("^" .. INLINE_PREFIX .. "@@") then
+                    end_row = end_row - 1
+                    break
+                end
+                end_row = end_row + 1
+            end
+            if end_row > #lines then
+                end_row = #lines
+            end
+
+            -- Pass the filename as a literal operand. Patch must never infer
+            -- a target from headers that can truncate or quote filenames.
+            local hunk_lines = { "--- before", "+++ after" }
+            for i = start_row, end_row do
+                table.insert(hunk_lines, lines[i]:sub(#INLINE_PREFIX + 1))
+            end
+
+            local patch_str = table.concat(hunk_lines, "\n") .. "\n"
+            local buf = M.buf
+            local tick = vim.api.nvim_buf_get_changedtick(buf)
+            local ok, err = pcall(
+                vim.system,
+                { "patch", "-R", "-f", "--", "./" .. filename },
+                {
+                    cwd = status_cwd,
+                    stdin = patch_str,
+                },
+                vim.schedule_wrap(function(obj)
+                    if obj.code ~= 0 then
+                        local output = obj.stderr ~= "" and obj.stderr or obj.stdout
+                        vim.notify("Failed to revert hunk:\n" .. (output or ""), vim.log.levels.ERROR)
+                        return
+                    end
+
+                    if
+                        M.buf == buf
+                        and vim.api.nvim_buf_is_valid(buf)
+                        and vim.api.nvim_buf_get_changedtick(buf) == tick
+                    then
+                        inline_diff_remove(file_line)
+                        inline_diff_insert(file_line, filename, state)
+                    end
+                    vim.notify("Reverted hunk in " .. filename, vim.log.levels.INFO)
+                end)
+            )
+            if not ok then
+                vim.notify("Failed to start patch: " .. tostring(err), vim.log.levels.ERROR)
+            end
+            return
+        end
+
         if state == "UNTRACKED" then
             api.exec_async({ "clean", "--force", "--", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" then
@@ -643,17 +796,21 @@ function M.refresh()
     if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
         return
     end
-    vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-    vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, { "Loading..." })
-    vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+    local buf = M.buf
+    local cwd = vim.fn.getcwd()
+    vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Loading..." })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+    local tick = vim.api.nvim_buf_get_changedtick(buf)
 
-    get_status_lines_async(function(lines)
-        if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
+    get_status_lines_async(cwd, function(lines)
+        if M.buf ~= buf or not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_changedtick(buf) ~= tick then
             return
         end
-        vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
-        vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
-        vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+        status_cwd = cwd
+        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
     end)
 end
 
@@ -850,6 +1007,19 @@ function M.open_status_window()
     end, opts)
     vim.keymap.set("n", "czp", function()
         select_stash("pop")
+    end, opts)
+
+    -- Sync
+    vim.keymap.set("n", "f", function()
+        vim.notify("Syncing with remote...", vim.log.levels.INFO)
+        require("fossil.api").exec_async({ "sync" }, nil, function(output, code)
+            if code == 0 then
+                vim.notify("Sync complete.", vim.log.levels.INFO)
+            else
+                vim.notify("Sync failed:\n" .. table.concat(output, "\n"), vim.log.levels.ERROR)
+            end
+            M.refresh()
+        end)
     end, opts)
 
     -- Command line populating mappings

@@ -77,29 +77,47 @@ function M.edit(args)
     vim.cmd("edit " .. vim.fn.fnameescape(target))
 end
 
-function M.browse(args)
-    local output, code = api.exec({ "remote" })
-    if code ~= 0 or #output == 0 or output[1] == "" then
-        vim.notify("No remote found or fossil remote failed.", vim.log.levels.ERROR)
-        return
+function M.ui(args)
+    local cmd = { "fossil", "ui" }
+    local filename = args[2]
+    if filename and filename ~= "" then
+        local root = util.get_repo_root()
+        if not root then
+            vim.notify("Not in a fossil checkout.", vim.log.levels.ERROR)
+            return
+        end
+
+        local prefix = vim.fs.normalize(root, { expand_env = false }):gsub("/+$", "") .. "/"
+        local target = vim.fs.normalize(vim.fn.fnamemodify(filename, ":p"), { expand_env = false })
+        if not vim.startswith(target, prefix) or #target == #prefix then
+            vim.notify("File is outside the fossil checkout: " .. filename, vim.log.levels.ERROR)
+            return
+        end
+
+        local relative = target:sub(#prefix + 1)
+        -- Fossil formats the browser command a second time to insert the port.
+        local encoded = relative:gsub("[^A-Za-z0-9_.~-]", function(char)
+            return string.format("%%%%%02X", char:byte())
+        end)
+        vim.list_extend(cmd, { "--page", "finfo?name=" .. encoded })
     end
 
-    local remote = output[1]
-
-    if remote:match("^http") then
-        local filename = args[2]
-        local url = remote
-        if filename and filename ~= "" then
-            local target = util.resolve_target_path(filename) or filename
-            local root = util.get_repo_root()
-            if root and target:sub(1, #root) == root then
-                target = target:sub(#root + 2)
+    -- The local server runs until Neovim exits, so use a job without a command timeout.
+    local stderr = ""
+    local job = vim.fn.jobstart(cmd, {
+        stderr_buffered = true,
+        on_stderr = function(_, lines)
+            stderr = vim.trim(table.concat(lines, "\n"))
+        end,
+        on_exit = function(_, code)
+            if code ~= 0 and vim.v.exiting == vim.NIL then
+                local detail = stderr ~= "" and stderr or ("exit code " .. code)
+                vim.notify("Failed to open Fossil UI: " .. detail, vim.log.levels.ERROR)
             end
-            url = url .. "/finfo?name=" .. target
-        end
-        vim.ui.open(url)
-    else
-        vim.notify("Remote is not a standard HTTP(S) URL: " .. remote, vim.log.levels.WARN)
+        end,
+    })
+    if job <= 0 then
+        vim.notify("Failed to start fossil ui.", vim.log.levels.ERROR)
     end
 end
 
@@ -310,6 +328,78 @@ function M.edit_with_cmd(args, vim_cmd)
     end
     local target = util.resolve_target_path(filename) or filename
     vim.cmd(vim_cmd .. " " .. vim.fn.fnameescape(target))
+end
+
+function M.conflict_split(split_cmd, filename)
+    if filename then
+        local target = util.resolve_target_path(filename) or filename
+        if vim.fn.fnamemodify(target, ":p") ~= vim.api.nvim_buf_get_name(0) then
+            vim.cmd("edit " .. vim.fn.fnameescape(target))
+        end
+    end
+
+    local cur_win = vim.api.nvim_get_current_win()
+    local cur_buf = vim.api.nvim_get_current_buf()
+    local lines = vim.api.nvim_buf_get_lines(cur_buf, 0, -1, false)
+
+    local local_lines = {}
+    local remote_lines = {}
+    local state = "normal"
+
+    for _, line in ipairs(lines) do
+        if state == "normal" and line:match("^<<<<<<< BEGIN MERGE CONFLICT") then
+            state = "local"
+        elseif
+            state == "local"
+            and (line:match("^####### SUGGESTED CONFLICT RESOLUTION") or line:match("^||||||| COMMON ANCESTOR"))
+        then
+            state = "skip"
+        elseif (state == "local" or state == "skip") and line:match("^======= MERGED IN") then
+            state = "remote"
+        elseif state == "remote" and line:match("^>>>>>>> END MERGE CONFLICT") then
+            state = "normal"
+        else
+            if state == "normal" then
+                table.insert(local_lines, line)
+                table.insert(remote_lines, line)
+            elseif state == "local" then
+                table.insert(local_lines, line)
+            elseif state == "remote" then
+                table.insert(remote_lines, line)
+            end
+        end
+    end
+
+    local filetype = vim.api.nvim_get_option_value("filetype", { buf = cur_buf })
+
+    local function create_scratch(name, content)
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(buf, string.format("%s (MERGE %d)", name, buf))
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+        vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+        vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+        if filetype and filetype ~= "" then
+            vim.api.nvim_set_option_value("filetype", filetype, { buf = buf })
+        end
+        return buf
+    end
+
+    local local_buf = create_scratch("Local", local_lines)
+    local remote_buf = create_scratch("Remote", remote_lines)
+
+    vim.cmd("leftabove " .. split_cmd)
+    vim.api.nvim_win_set_buf(0, local_buf)
+    vim.cmd("diffthis")
+
+    vim.api.nvim_set_current_win(cur_win)
+
+    vim.cmd("rightbelow " .. split_cmd)
+    vim.api.nvim_win_set_buf(0, remote_buf)
+    vim.cmd("diffthis")
+
+    vim.api.nvim_set_current_win(cur_win)
+    vim.cmd("diffthis")
 end
 
 return M

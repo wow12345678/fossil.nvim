@@ -40,7 +40,7 @@ describe("fossil.ui.status", function()
 
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
         assert.are.same("Head: trunk (077db72085)", lines[1])
-        assert.are.same("Remote: http://localhost:8080", lines[2])
+        assert.are.same("Remote: http://localhost:8080 (autosync on) - Up to date", lines[2])
         assert.are.same("Help: g?", lines[3])
         assert.are.same("", lines[4])
         assert.are.same("Changes:", lines[5])
