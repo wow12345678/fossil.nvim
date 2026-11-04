@@ -412,7 +412,10 @@ function M.open_ticket_window()
                                 vim.cmd("q")
                                 M.open_ticket_window()
                             else
-                                vim.notify("Failed to create ticket:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+                                vim.notify(
+                                    "Failed to create ticket:\n" .. table.concat(out, "\n"),
+                                    vim.log.levels.ERROR
+                                )
                             end
                         else
                             vim.notify("No fields provided, ticket creation cancelled.", vim.log.levels.WARN)

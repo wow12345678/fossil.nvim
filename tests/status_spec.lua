@@ -8,8 +8,8 @@ describe("fossil.ui.status", function()
     end)
 
     it("should parse status properly (mocked)", function()
-        local original_exec = api.exec
-        api.exec = function(args)
+        local original_exec_async = api.exec_async
+        local function output(args)
             if args[1] == "status" then
                 return {
                     "repository: /test",
@@ -27,6 +27,10 @@ describe("fossil.ui.status", function()
             return {}, 0
         end
 
+        api.exec_async = function(args, _, callback)
+            callback(output(args))
+        end
+
         status.open_status_window()
 
         -- verify buffer is created
@@ -36,7 +40,7 @@ describe("fossil.ui.status", function()
 
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
         assert.are.same("Head: trunk (077db72085)", lines[1])
-        assert.are.same("Remote: http://localhost:8080", lines[2])
+        assert.are.same("Remote: http://localhost:8080 (autosync on) - Up to date", lines[2])
         assert.are.same("Help: g?", lines[3])
         assert.are.same("", lines[4])
         assert.are.same("Changes:", lines[5])
@@ -45,6 +49,6 @@ describe("fossil.ui.status", function()
         assert.are.same("Untracked:", lines[8])
         assert.are.same("  ? untracked.txt", lines[9])
 
-        api.exec = original_exec
+        api.exec_async = original_exec_async
     end)
 end)

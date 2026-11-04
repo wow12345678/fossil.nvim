@@ -46,7 +46,7 @@ function M.show_help()
         "    Synchronize with a remote repository.",
         "",
         "  ui",
-        "    Open the remote repository in a web browser.",
+        "    Open the local repository in a web browser.",
         "",
         "  help",
         "    Show this help message.",
@@ -67,14 +67,14 @@ local commands = {
     annotate = blame.open_blame_view,
     diffsplit = function(args, is_bang)
         if is_bang then
-            ops.conflict_split("split")
+            ops.conflict_split("split", args[2])
         else
             window.open_diffsplit(args, nil, false, is_bang)
         end
     end,
     vdiffsplit = function(args, is_bang)
         if is_bang then
-            ops.conflict_split("vsplit")
+            ops.conflict_split("vsplit", args[2])
         else
             window.open_diffsplit(args, "vsplit", false, is_bang)
         end
