@@ -22,7 +22,7 @@ local function open_diff_tab(hash1, out1, hash2, out2, tgt)
     vim.api.nvim_set_option_value("modifiable", false, { buf = b2 })
     vim.cmd("diffthis")
 
-    vim.cmd("rightbelow vsplit")
+    vim.cmd("rightbelow vnew")
     local b1 = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_name(
         b1,
@@ -167,7 +167,7 @@ function M.open_finfo_window(args)
 
         local out, c = api.exec({ "cat", tgt, "-r", hash })
         if c == 0 then
-            vim.cmd("vsplit")
+            vim.cmd("vnew")
             local b = vim.api.nvim_get_current_buf()
             vim.api.nvim_buf_set_name(
                 b,

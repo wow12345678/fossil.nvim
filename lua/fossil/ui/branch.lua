@@ -65,7 +65,7 @@ function M.open_branch_window()
 
     local function get_branch_under_cursor()
         local line = vim.api.nvim_get_current_line()
-        if line:match("^=*") or line:match("^|") or line:match("^ <") or line:match("^ [a-z] ") or line == "" then
+        if line:match("^=+") or line:match("^|") or line:match("^ <") or line:match("^ [a-z] ") or line == "" then
             return nil
         end
         -- fossil branch list outputs like:

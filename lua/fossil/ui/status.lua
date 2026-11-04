@@ -150,7 +150,7 @@ local function unstage_all()
             end
         end
         if #added_files > 0 then
-            local args = { "rm", "--soft" }
+            local args = { "rm", "--soft", "--" }
             for _, f in ipairs(added_files) do
                 table.insert(args, f)
             end
@@ -434,7 +434,7 @@ local function file_action(action_type)
                     end
                 end
                 if #to_add > 0 then
-                    local cmd = { "add" }
+                    local cmd = { "add", "--" }
                     for _, file in ipairs(to_add) do
                         table.insert(cmd, file)
                     end
@@ -442,7 +442,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_add
                 end
                 if #to_rm > 0 then
-                    local cmd = { "rm" }
+                    local cmd = { "rm", "--" }
                     for _, file in ipairs(to_rm) do
                         table.insert(cmd, file)
                     end
@@ -460,7 +460,7 @@ local function file_action(action_type)
                     end
                 end
                 if #to_rm_soft > 0 then
-                    local cmd = { "rm", "--soft" }
+                    local cmd = { "rm", "--soft", "--" }
                     for _, file in ipairs(to_rm_soft) do
                         table.insert(cmd, file)
                     end
@@ -468,7 +468,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_rm_soft
                 end
                 if #to_revert > 0 then
-                    local cmd = { "revert" }
+                    local cmd = { "revert", "--" }
                     for _, file in ipairs(to_revert) do
                         table.insert(cmd, file)
                     end
@@ -492,7 +492,7 @@ local function file_action(action_type)
                     end
                 end
                 if #to_add > 0 then
-                    local cmd = { "add" }
+                    local cmd = { "add", "--" }
                     for _, file in ipairs(to_add) do
                         table.insert(cmd, file)
                     end
@@ -500,7 +500,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_add
                 end
                 if #to_rm_soft > 0 then
-                    local cmd = { "rm", "--soft" }
+                    local cmd = { "rm", "--soft", "--" }
                     for _, file in ipairs(to_rm_soft) do
                         table.insert(cmd, file)
                     end
@@ -508,7 +508,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_rm_soft
                 end
                 if #to_rm > 0 then
-                    local cmd = { "rm" }
+                    local cmd = { "rm", "--" }
                     for _, file in ipairs(to_rm) do
                         table.insert(cmd, file)
                     end
@@ -516,7 +516,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_rm
                 end
                 if #to_revert > 0 then
-                    local cmd = { "revert" }
+                    local cmd = { "revert", "--" }
                     for _, file in ipairs(to_revert) do
                         table.insert(cmd, file)
                     end
@@ -537,7 +537,7 @@ local function file_action(action_type)
                     end
                 end
                 if #to_clean > 0 then
-                    local cmd = { "clean", "--force" }
+                    local cmd = { "clean", "--force", "--" }
                     for _, file in ipairs(to_clean) do
                         table.insert(cmd, file)
                     end
@@ -545,7 +545,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_clean
                 end
                 if #to_rm > 0 then
-                    local cmd = { "rm" }
+                    local cmd = { "rm", "--" }
                     for _, file in ipairs(to_rm) do
                         table.insert(cmd, file)
                     end
@@ -553,7 +553,7 @@ local function file_action(action_type)
                     applied_count = applied_count + #to_rm
                 end
                 if #to_revert > 0 then
-                    local cmd = { "revert" }
+                    local cmd = { "revert", "--" }
                     for _, file in ipairs(to_revert) do
                         table.insert(cmd, file)
                     end
@@ -582,7 +582,7 @@ local function file_action(action_type)
         if state == "UNTRACKED" then
             vim.notify("Cannot diff untracked file.", vim.log.levels.WARN)
         else
-            require("fossil.command").execute({ "diff", filename })
+            require("fossil.command").execute({ "diff", "--", filename })
         end
     elseif action_type == "diffsplit" then
         require("fossil.command").execute({ "diffsplit", filename })
@@ -598,9 +598,9 @@ local function file_action(action_type)
         inline_diff_remove(file_line)
     elseif action_type == "stage" then
         if state == "UNTRACKED" then
-            api.exec_async({ "add", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "add", "--", filename }, nil, function() M.refresh() end)
         elseif state == "MISSING" then
-            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "rm", "--", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" or state == "DELETED" then
             vim.notify("Already added/staged.", vim.log.levels.INFO)
         else
@@ -608,9 +608,9 @@ local function file_action(action_type)
         end
     elseif action_type == "unstage" then
         if state == "ADDED" then
-            api.exec_async({ "rm", "--soft", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "rm", "--soft", "--", filename }, nil, function() M.refresh() end)
         elseif state == "DELETED" then
-            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "revert", "--", filename }, nil, function() M.refresh() end)
         elseif state == "UNTRACKED" then
             vim.notify("File is untracked.", vim.log.levels.INFO)
         else
@@ -618,13 +618,13 @@ local function file_action(action_type)
         end
     elseif action_type == "toggle" then
         if state == "UNTRACKED" then
-            api.exec_async({ "add", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "add", "--", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" then
-            api.exec_async({ "rm", "--soft", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "rm", "--soft", "--", filename }, nil, function() M.refresh() end)
         elseif state == "MISSING" then
-            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "rm", "--", filename }, nil, function() M.refresh() end)
         elseif state == "DELETED" then
-            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "revert", "--", filename }, nil, function() M.refresh() end)
         else
             vim.notify("Fossil has no staging for tracked files.", vim.log.levels.INFO)
         end
@@ -704,11 +704,11 @@ local function file_action(action_type)
         end
 
         if state == "UNTRACKED" then
-            api.exec_async({ "clean", "--force", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "clean", "--force", "--", filename }, nil, function() M.refresh() end)
         elseif state == "ADDED" then
-            api.exec_async({ "rm", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "rm", "--", filename }, nil, function() M.refresh() end)
         else
-            api.exec_async({ "revert", filename }, nil, function() M.refresh() end)
+            api.exec_async({ "revert", "--", filename }, nil, function() M.refresh() end)
         end
     elseif action_type == "open" then
         open_file(filename, "edit")
@@ -1051,7 +1051,17 @@ function M.open_status_window()
     vim.keymap.set("n", ".", function()
         local filename = get_file_under_cursor()
         if filename then
-            feed(":F " .. filename .. "<C-B><C-Right><Right> ")
+            -- Set the filename as command-line text, never as executable keys.
+            vim.api.nvim_create_autocmd("CmdlineEnter", {
+                pattern = ":",
+                once = true,
+                callback = function()
+                    -- :F uses fargs, which only unescapes whitespace and backslashes.
+                    local escaped = vim.fn.escape(filename, " \t\\")
+                    vim.fn.setcmdline("F  " .. escaped, 3)
+                end,
+            })
+            feed(":")
         end
     end, opts)
 
